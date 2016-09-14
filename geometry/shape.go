@@ -2,11 +2,7 @@ package shape
 
 import (
     "fmt"
-    "time"
 )
-
-var _ = fmt.Printf
-var _ = time.Sleep
 
 type Shape interface {
 }
