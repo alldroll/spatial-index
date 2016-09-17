@@ -1,29 +1,35 @@
 package quadtree
 
 import (
+	//"fmt"
 	"github.com/alldroll/quadtree/geometry"
 )
 
 /**/
 type Part int
+
 const (
-	TOP_LEFT Part = 0
-	TOP_RIGHT = 1
-	BOTTOM_LEFT = 2
-	BOTTOM_RIGHT = 3
-	NODE_CAPACITY = 40
+	TOP_LEFT     Part = 0
+	TOP_RIGHT         = 1
+	BOTTOM_LEFT       = 2
+	BOTTOM_RIGHT      = 3
 )
+
+const CHILDREN_COUNT = 4
 
 /**/
 type Node struct {
-	box *shape.BoundaryBox
-	children [4]*Node
-	level int
+	box      *shape.BoundaryBox
+	points   []*shape.Point
+	children [CHILDREN_COUNT]*Node
+	length   int
+	level    int
+	capacity int
 }
 
 /**/
 type QuadTree struct {
-	root *Node
+	root   *Node
 	length int
 }
 
@@ -36,104 +42,108 @@ func (e *QuadTreeError) Error() string {
 	return e.msg
 }
 
-func NewNode(box *shape.BoundaryBox, level int) *Node {
-	return &Node{ box, [4]*Node{nil, nil, nil, nil}, level }
+func NewNode(box *shape.BoundaryBox, level int, capacity int) *Node {
+	return &Node{
+		box,
+		[]*shape.Point{},
+		[CHILDREN_COUNT]*Node{nil, nil, nil, nil},
+		0,
+		level,
+		capacity,
+	}
 }
 
-func DivideNodeUntil(node *Node, minArea float64) *Node {
-	if (node == nil || node.box.Area() < minArea) {
-		return nil
-	}
-
+func (node *Node) SplitNode() {
 	boxes := node.box.Quarter()
 	nlevel := node.level + 1
+	capacity := node.capacity
 
-	node.children[TOP_LEFT] = DivideNodeUntil(
-		NewNode(boxes[TOP_LEFT], nlevel),
-		minArea,
-	)
-
-	node.children[TOP_RIGHT] = DivideNodeUntil(
-		NewNode(boxes[TOP_RIGHT], nlevel),
-		minArea,
-	)
-
-	node.children[BOTTOM_LEFT] = DivideNodeUntil(
-		NewNode(boxes[BOTTOM_LEFT], nlevel),
-		minArea,
-	)
-
-	node.children[BOTTOM_RIGHT] = DivideNodeUntil(
-		NewNode(boxes[BOTTOM_RIGHT], nlevel),
-		minArea,
-	)
-
-	return node
+	node.children[TOP_LEFT] = NewNode(boxes[TOP_LEFT], nlevel, capacity)
+	node.children[TOP_RIGHT] = NewNode(boxes[TOP_RIGHT], nlevel, capacity)
+	node.children[BOTTOM_LEFT] = NewNode(boxes[BOTTOM_LEFT], nlevel, capacity)
+	node.children[BOTTOM_RIGHT] = NewNode(boxes[BOTTOM_RIGHT], nlevel, capacity)
 }
 
-func NewQuadTree(x1, y1, x2, y2 float64, minArea float64) (*QuadTree, error) {
-	if (x1 > x2 || y1 > y2) {
+func (node *Node) GetPoints() []*shape.Point {
+	return node.points
+}
+
+func NewQuadTree(x1, y1, x2, y2 float64, capacity int) (*QuadTree, error) {
+	if x1 > x2 || y1 > y2 {
 		return nil, &QuadTreeError{"Invalid Points for BoundaryBox construct"}
 	}
-	global := shape.NewBoundaryBox(shape.NewPoint(x1, y1), shape.NewPoint(x2, y2))
-	root := DivideNodeUntil(NewNode(global, 0), minArea)
+
+	global := shape.NewBoundaryBox(
+		shape.NewPoint(x1, y1),
+		shape.NewPoint(x2, y2),
+	)
+	root := NewNode(global, 0, capacity)
 	return &QuadTree{root, 0}, nil
 }
 
-func InsertPoint(cur* Node, point *shape.Point) bool {
-	if (cur == nil || !cur.box.ContainsPoint(point)) {
+func (node *Node) IsLeaf() bool {
+	return node.children[TOP_RIGHT] == nil
+}
+
+func (node *Node) InsertPoint(point *shape.Point) bool {
+	if !node.box.ContainsPoint(point) {
 		return false
 	}
 
-	children := cur.children
-	if (children == [4]*Node{nil, nil, nil, nil}) {
-		cur.box.AppendPoint(point)
+	if node.length < node.capacity {
+		node.points = append(node.points, point)
+		node.length += 1
 		return true
 	}
 
-	if (cur.box.GetPointsCount() < NODE_CAPACITY) {
-		cur.box.AppendPoint(point)
+	if node.IsLeaf() {
+		node.SplitNode()
 	}
 
-	return InsertPoint(children[TOP_LEFT], point) ||
-	InsertPoint(children[TOP_RIGHT], point) ||
-	InsertPoint(children[BOTTOM_LEFT], point) ||
-	InsertPoint(children[BOTTOM_RIGHT], point)
+	children := node.children
+	return children[TOP_LEFT].InsertPoint(point) ||
+		children[TOP_RIGHT].InsertPoint(point) ||
+		children[BOTTOM_LEFT].InsertPoint(point) ||
+		children[BOTTOM_RIGHT].InsertPoint(point)
 }
 
 func (qt *QuadTree) Insert(x, y float64) bool {
 	p := shape.NewPoint(x, y)
-	return InsertPoint(qt.root, p)
+	res := qt.root.InsertPoint(p)
+	if res {
+		qt.length += 1
+	}
+
+	return res
 }
 
-func GetPointsFromArea(cur *Node, area *shape.BoundaryBox) []*shape.Point {
+func (node *Node) GetPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
 	//we are not in valid node
-	if (cur == nil || !cur.box.Intersect(area)) {
+	if node == nil || !node.box.Intersect(area) {
 		return []*shape.Point{}
 	}
 
-	if (!cur.box.ContainsBox(area)) {
-		return cur.box.GetPoints()
+	result := node.GetPoints()
+	if !node.IsLeaf() {
+		children := node.children
+		result = append(result, children[TOP_LEFT].GetPointsFromArea(area)...)
+		result = append(result, children[TOP_RIGHT].GetPointsFromArea(area)...)
+		result = append(result, children[BOTTOM_LEFT].GetPointsFromArea(area)...)
+		result = append(result, children[BOTTOM_RIGHT].GetPointsFromArea(area)...)
 	}
-
-	//if this is leaf return points
-	if (cur.children == [4]*Node{nil, nil, nil, nil}) {
-		return cur.box.GetPoints()
-	}
-
-	result := GetPointsFromArea(cur.children[TOP_LEFT], area)
-	result = append(result, GetPointsFromArea(cur.children[TOP_RIGHT], area)...)
-	result = append(result, GetPointsFromArea(cur.children[BOTTOM_LEFT], area)...)
-	result = append(result, GetPointsFromArea(cur.children[BOTTOM_RIGHT], area)...)
 
 	return result
 }
 
 func (qt *QuadTree) GetPoints(x1, y1, x2, y2 float64) ([]*shape.Point, error) {
-	if (x1 > x2 || y1 > y2) {
+	if x1 > x2 || y1 > y2 {
 		return nil, &QuadTreeError{"Invalid Points for BoundaryBox construct"}
 	}
 
 	area := shape.NewBoundaryBox(shape.NewPoint(x1, y1), shape.NewPoint(x2, y2))
-	return GetPointsFromArea(qt.root, area), nil
+	return qt.root.GetPointsFromArea(area), nil
+}
+
+func (qt *QuadTree) GetLength() int {
+	return qt.length
 }

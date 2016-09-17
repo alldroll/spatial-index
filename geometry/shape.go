@@ -1,16 +1,12 @@
 package shape
 
-import (
-	"fmt"
-)
-
 /**/
 type Point struct {
 	x, y float64
 }
 
 /**/
-func NewPoint(x, y float64) *Point{
+func NewPoint(x, y float64) *Point {
 	return &Point{x, y}
 }
 
@@ -27,11 +23,10 @@ func (self *Point) Equal(other *Point) bool {
 /**/
 type BoundaryBox struct {
 	bl, tr *Point /*bottom left, top right*/
-	points  []*Point
 }
 
 func NewBoundaryBox(bl, tr *Point) *BoundaryBox {
-	return &BoundaryBox{bl, tr, []*Point{}}
+	return &BoundaryBox{bl, tr}
 }
 
 func (self *BoundaryBox) Equal(other *BoundaryBox) bool {
@@ -40,7 +35,7 @@ func (self *BoundaryBox) Equal(other *BoundaryBox) bool {
 
 func (self *BoundaryBox) ContainsPoint(point *Point) bool {
 	return self.bl.x <= point.x && self.bl.y <= point.y &&
-	self.tr.x >= point.x && self.tr.y >= point.y
+		self.tr.x >= point.x && self.tr.y >= point.y
 }
 
 func (self *BoundaryBox) ContainsBox(boundary *BoundaryBox) bool {
@@ -52,20 +47,20 @@ func (self *BoundaryBox) Quarter() [4]*BoundaryBox {
 
 	return [4]*BoundaryBox{
 		NewBoundaryBox(
-			NewPoint(self.bl.x, self.bl.y + ym),
-			NewPoint(self.bl.x + xm, self.tr.y),
+			NewPoint(self.bl.x, self.bl.y+ym),
+			NewPoint(self.bl.x+xm, self.tr.y),
 		),
 		NewBoundaryBox(
-			NewPoint(self.bl.x + xm, self.bl.y + ym),
+			NewPoint(self.bl.x+xm, self.bl.y+ym),
 			self.tr,
 		),
 		NewBoundaryBox(
 			self.bl,
-			NewPoint(self.bl.x + xm, self.bl.y + ym),
+			NewPoint(self.bl.x+xm, self.bl.y+ym),
 		),
 		NewBoundaryBox(
-			NewPoint(self.bl.x + xm, self.bl.y),
-			NewPoint(self.tr.x, self.bl.y + ym),
+			NewPoint(self.bl.x+xm, self.bl.y),
+			NewPoint(self.tr.x, self.bl.y+ym),
 		),
 	}
 }
@@ -74,23 +69,7 @@ func (self *BoundaryBox) Area() float64 {
 	return (self.tr.x - self.bl.x) * (self.tr.y - self.bl.y)
 }
 
-func (self *BoundaryBox) AppendPoint(point *Point) {
-	self.points = append(self.points, point)
-}
-
-func (self *BoundaryBox) GetPoints() []*Point {
-	fmt.Printf(
-		"BOX x1: %f, y1: %f, x2: %f, y2: %f\n",
-		self.bl.x, self.bl.y, self.tr.x, self.tr.y,
-	)
-	return self.points
-}
-
 func (self *BoundaryBox) Intersect(other *BoundaryBox) bool {
 	return self.tr.x >= other.bl.x && other.tr.x >= self.bl.x &&
-	self.tr.y >= other.bl.y && other.tr.y >= self.bl.y
-}
-
-func (self *BoundaryBox) GetPointsCount() int {
-	return len(self.points)
+		self.tr.y >= other.bl.y && other.tr.y >= self.bl.y
 }
