@@ -58,7 +58,27 @@ func TestSimple(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	if len(points) != 4 {
-		t.Errorf("Should be 4 points, %u", points)
+	if len(points) != 3 {
+		t.Errorf("Should be 3 points, %u", points)
+	}
+}
+
+func TestShouldBeOnePoint(t *testing.T) {
+	qt, err := NewQuadTree(0, 0, 1, 1, 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	qt.Insert(0, 0)
+	qt.Insert(0.1, 0.1)
+	qt.Insert(0, 0.12)
+
+	points, err := qt.GetPoints(0.025, 0.025, 0.125, 0.125)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(points) != 1 {
+		t.Errorf("Should be 1 point, %u", points)
 	}
 }

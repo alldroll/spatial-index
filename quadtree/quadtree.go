@@ -123,7 +123,13 @@ func (node *Node) GetPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
 		return []*shape.Point{}
 	}
 
-	result := node.GetPoints()
+	result := []*shape.Point{}
+	for _, point := range node.GetPoints() {
+		if area.ContainsPoint(point) {
+			result = append(result, point)
+		}
+	}
+
 	if !node.IsLeaf() {
 		children := node.children
 		result = append(result, children[TOP_LEFT].GetPointsFromArea(area)...)
