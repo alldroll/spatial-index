@@ -2,18 +2,29 @@ package main
 
 import (
 	//"github.com/alldroll/quadtree/quadtree"
+	"encoding/json"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 )
+
+type AppConf struct {
+	Host         string
+	GoogleApiKey string
+	Zoom         int
+}
 
 var (
 	indexTemplate = template.Must(template.ParseFiles("client/index.html"))
 	upgrader      = websocket.Upgrader{}
+	appConf       = AppConf{}
 )
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
+	log.Printf("new connection")
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("something with upgrader", err)
@@ -44,13 +55,35 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	indexTemplate.Execute(w, "ws://"+r.Host+"/ws")
+	data := struct {
+		WSPath string
+		ApiKey string
+		Zoom   int
+	}{
+		WSPath: "ws://" + appConf.Host + "/ws",
+		ApiKey: appConf.GoogleApiKey,
+		Zoom:   appConf.Zoom,
+	}
+
+	indexTemplate.Execute(w, data)
+}
+
+func readConfig() error {
+	file, _ := os.Open("config/conf.json")
+	decoder := json.NewDecoder(file)
+	return decoder.Decode(&appConf)
 }
 
 func main() {
+	err := readConfig()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", serveWS)
-	err := http.ListenAndServe("localhost:8080", nil)
+	err = http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
