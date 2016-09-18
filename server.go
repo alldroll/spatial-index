@@ -1,11 +1,12 @@
 package main
 
 import (
-	//"github.com/alldroll/quadtree/quadtree"
 	"encoding/json"
+	"github.com/alldroll/quadtree/quadtree"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 )
@@ -17,10 +18,15 @@ type AppConf struct {
 }
 
 var (
-	indexTemplate = template.Must(template.ParseFiles("client/index.html"))
-	upgrader      = websocket.Upgrader{}
-	appConf       = AppConf{}
+	indexTemplate                    = template.Must(template.ParseFiles("client/index.html"))
+	upgrader                         = websocket.Upgrader{}
+	appConf                          = AppConf{}
+	quadTree      *quadtree.QuadTree = nil
 )
+
+type TypeRes struct {
+	Lat, Lon float64
+}
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("new connection")
@@ -33,15 +39,33 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 	defer conn.Close()
 
+	coords := struct {
+		Lat1 float64
+		Lon1 float64
+		Lat2 float64
+		Lon2 float64
+	}{}
+
 	for {
-		messageType, message, err := conn.ReadMessage()
+		err := conn.ReadJSON(&coords)
 		if err != nil {
 			log.Printf("something with read message", err)
 			break
 		}
 
-		log.Printf("recieve: %s", message)
-		err = conn.WriteMessage(messageType, message)
+		log.Printf("recieve: %#v\n", coords)
+
+		points, _ := quadTree.GetPoints(coords.Lon1, coords.Lon2, coords.Lat1, coords.Lat2)
+
+		res := make([]TypeRes, len(points))
+		for i, p := range points {
+			res[i] = TypeRes{
+				Lat: p.GetX(),
+				Lon: p.GetY(),
+			}
+		}
+
+		err = conn.WriteJSON(res)
 		if err != nil {
 			log.Printf("something with write message", err)
 			break
@@ -68,6 +92,21 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	indexTemplate.Execute(w, data)
 }
 
+const (
+	Kdb = 131.78635917382815
+	Kdf = 131.9923528261719
+	Pdb = 43.224515498757405
+	Pdf = 43.024050275744735
+)
+
+func generatePoints() {
+	for i := 1; i < 100; i++ {
+		a := Pdf + rand.Float64()*(Pdb-Pdf)
+		b := Kdb + rand.Float64()*(Kdf-Kdb)
+		quadTree.Insert(a, b)
+	}
+}
+
 func readConfig() error {
 	file, _ := os.Open("config/conf.json")
 	decoder := json.NewDecoder(file)
@@ -80,6 +119,14 @@ func main() {
 		log.Fatal(err)
 		return
 	}
+
+	quadTree, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 10)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	generatePoints()
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", serveWS)

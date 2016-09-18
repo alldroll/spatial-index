@@ -20,6 +20,14 @@ func (self *Point) Equal(other *Point) bool {
 	return self.EqualXY(other.x, other.y)
 }
 
+func (self *Point) GetX() float64 {
+	return self.x
+}
+
+func (self *Point) GetY() float64 {
+	return self.y
+}
+
 /**/
 type BoundaryBox struct {
 	bl, tr *Point /*bottom left, top right*/
