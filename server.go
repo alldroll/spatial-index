@@ -55,7 +55,7 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("recieve: %#v\n", coords)
 
-		points, _ := quadTree.GetPoints(coords.Lon1, coords.Lon2, coords.Lat1, coords.Lat2)
+		points, _ := quadTree.GetPoints(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2)
 
 		res := make([]TypeRes, len(points))
 		for i, p := range points {
@@ -100,7 +100,7 @@ const (
 )
 
 func generatePoints() {
-	for i := 1; i < 100; i++ {
+	for i := 1; i < 500; i++ {
 		a := Pdf + rand.Float64()*(Pdb-Pdf)
 		b := Kdb + rand.Float64()*(Kdf-Kdb)
 		quadTree.Insert(a, b)

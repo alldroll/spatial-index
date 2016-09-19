@@ -3,6 +3,7 @@ package quadtree
 import (
 	//"fmt"
 	"github.com/alldroll/quadtree/geometry"
+	"log"
 )
 
 /**/
@@ -124,8 +125,10 @@ func (node *Node) GetPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
 	}
 
 	result := []*shape.Point{}
+	log.Printf("AREA: %u\n", area)
 	for _, point := range node.GetPoints() {
 		if area.ContainsPoint(point) {
+			log.Printf("contains: %u\n", point)
 			result = append(result, point)
 		}
 	}

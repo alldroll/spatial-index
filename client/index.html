@@ -17,6 +17,8 @@
                 zoom: {{.Zoom}}
             });
 
+            var markers = [];
+
             var showMarkers = function() {
                 var bounds = map.getBounds();
                 console.log(bounds);
@@ -32,8 +34,40 @@
                 ws.send(JSON.stringify(toSend))
             };
 
+            var addMarker = function(lat, lng) {
+                var marker = new google.maps.Marker({
+                    position: {
+                        lat: lat,
+                        lng: lng
+                    },
+                    map: map
+                });
+                markers.push(marker);
+            };
+
+            function setMapOnAll(map) {
+                for (var i = 0; i < markers.length; i++) {
+                    markers[i].setMap(map);
+                }
+            }
+
+            var clearAllMarkers = function() {
+                setMapOnAll(null);
+            };
+
+            var deleteAllMarkers = function() {
+                clearAllMarkers(null);
+                markers = [];
+            }
+
             ws.onmessage = function(event) {
-                console.log(event.data.length)
+                deleteAllMarkers();
+                var a = JSON.parse(event.data);
+                for (var k in a) {
+                    addMarker(a[k].Lat, a[k].Lon);
+                }
+
+                console.log('ADDED ' + a.length + ' CNT');
             };
 
             map.addListener('idle', showMarkers);
