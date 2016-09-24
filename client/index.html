@@ -67,6 +67,13 @@
                     addMarker(a[k].Lat, a[k].Lon);
                 }
 
+                var markerCluster = new MarkerClusterer(
+                    map,
+                    markers,
+                    {
+                        imagePath: 'https://googlemaps.github.io/js-marker-clusterer/images/m'
+                    }
+                );
                 console.log('ADDED ' + a.length + ' CNT');
             };
 
@@ -77,5 +84,9 @@
     <script async defer
             src="https://maps.googleapis.com/maps/api/js?key={{.ApiKey}}&callback=initMap">
     </script>
+    <script async defer type="text/javascript"
+            src="https://googlemaps.github.io/js-marker-clusterer/src/markerclusterer.js">
+    </script>
+
 </body>
 </html>

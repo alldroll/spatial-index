@@ -100,7 +100,7 @@ const (
 )
 
 func generatePoints() {
-	for i := 1; i < 500; i++ {
+	for i := 0; i < 50; i++ {
 		a := Pdf + rand.Float64()*(Pdb-Pdf)
 		b := Kdb + rand.Float64()*(Kdf-Kdb)
 		quadTree.Insert(a, b)
@@ -120,7 +120,7 @@ func main() {
 		return
 	}
 
-	quadTree, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 10)
+	quadTree, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 20)
 	if err != nil {
 		log.Fatal(err)
 		return

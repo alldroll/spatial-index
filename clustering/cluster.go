@@ -22,3 +22,5 @@ type PointClusterer struct {
 func (Cluster *self) addPoint(point *shape.Point) bool {
 
 }
+
+func Optics() {}
