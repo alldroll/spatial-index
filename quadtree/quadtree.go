@@ -69,28 +69,6 @@ func (qt *QuadTree) GetPoints(x1, y1, x2, y2 float64) ([]*shape.Point, error) {
 	return qt.root.getPointsFromArea(area), nil
 }
 
-func (qt *QuadTree) GetNearestSubtree(x1, y1, x2, y2 float64) (*QuadTree, error) {
-	if x1 > x2 || y1 > y2 {
-		return nil, &QuadTreeError{"Invalid Points for BoundaryBox construct"}
-	}
-
-	area := shape.NewBoundaryBox(shape.NewPoint(x1, y1), shape.NewPoint(x2, y2))
-	if !qt.root.box.Intersect(area) {
-		return nil, &QuadTreeError{"TODO error"}
-	}
-
-	if !qt.root.box.ContainsBox(area) {
-		return qt, nil /* self is nearest */
-	}
-
-	node := qt.root.getNearestNodeFromArea(area)
-	if node == nil {
-		return nil, &QuadTreeError{"TODO error"}
-	}
-
-	return &QuadTree{node, 0}, nil /* length is invalid TT */
-}
-
 func (qt *QuadTree) GetLength() int {
 	return qt.length
 }
@@ -104,19 +82,6 @@ func newNode(box *shape.BoundaryBox, level int, capacity int) *node {
 		level,
 		capacity,
 	}
-}
-
-func (self *node) splitNode() {
-	boxes := self.box.Quarter()
-	nlevel := self.level + 1
-	capacity := self.capacity
-	for i := 0; i < totalChild; i++ {
-		self.children[i] = newNode(boxes[i], nlevel, capacity)
-	}
-}
-
-func (self *node) getPoints() []*shape.Point {
-	return self.points
 }
 
 func (self *node) insertPoint(point *shape.Point) bool {
@@ -139,6 +104,15 @@ func (self *node) insertPoint(point *shape.Point) bool {
 		children[topRight].insertPoint(point) ||
 		children[bottomLeft].insertPoint(point) ||
 		children[bottomRight].insertPoint(point)
+}
+
+func (self *node) splitNode() {
+	boxes := self.box.Quarter()
+	nlevel := self.level + 1
+	capacity := self.capacity
+	for i := 0; i < totalChild; i++ {
+		self.children[i] = newNode(boxes[i], nlevel, capacity)
+	}
 }
 
 func (self *node) getPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
@@ -165,22 +139,8 @@ func (self *node) getPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
 	return result
 }
 
-func (self *node) getNearestNodeFromArea(area *shape.BoundaryBox) *node {
-	if !self.box.ContainsBox(area) {
-		return nil
-	}
-
-	if !self.isLeaf() {
-		children := self.children
-		for i := 0; i < totalChild; i++ {
-			nearest := children[i].getNearestNodeFromArea(area)
-			if nearest != nil {
-				return nearest
-			}
-		}
-	}
-
-	return self
+func (self *node) getPoints() []*shape.Point {
+	return self.points
 }
 
 func (self *node) isLeaf() bool {
