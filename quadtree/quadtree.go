@@ -1,7 +1,7 @@
 package quadtree
 
 import (
-	"github.com/alldroll/quadtree/geometry"
+	"github.com/alldroll/spatial-index/geometry"
 )
 
 /**/

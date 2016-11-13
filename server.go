@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/alldroll/quadtree/quadtree"
+	"github.com/alldroll/spatial-index/quadtree"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
