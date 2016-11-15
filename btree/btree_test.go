@@ -16,11 +16,16 @@ func TestImplementMe(t *testing.T) {
 		t.Errorf("TestFail, btree is nil")
 	}
 
-	var m myKey = 1
-	btree.Insert(m)
-
-	actual := btree.Search(m)
-	if actual != m {
-		t.Errorf("TestFail, expected: %d", m)
+	m := [10]myKey{1, 2, 5, 4, 3, 6, 10, 7, -1, 20}
+	for _, v := range m {
+		btree.Insert(v)
 	}
+
+	for _, v := range m {
+		if btree.Search(v) != v {
+			t.Errorf("TestFail, expected: %d", v)
+		}
+	}
+
+	btree.Draw()
 }
