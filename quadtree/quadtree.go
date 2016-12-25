@@ -52,7 +52,11 @@ func NewQuadTree(x1, y1, x2, y2 float64, capacity int) (*QuadTree, error) {
 
 func (qt *QuadTree) Insert(x, y float64) bool {
 	p := shape.NewPoint(x, y)
-	res := qt.root.insertPoint(p)
+	return qt.InsertPoint(p)
+}
+
+func (qt *QuadTree) InsertPoint(point *shape.Point) bool {
+	res := qt.root.insertPoint(point)
 	if res {
 		qt.length += 1
 	}

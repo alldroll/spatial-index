@@ -34,13 +34,14 @@
                 ws.send(JSON.stringify(toSend))
             };
 
-            var addMarker = function(lat, lng) {
+            var addMarker = function(lat, lng, cnt) {
                 var marker = new google.maps.Marker({
                     position: {
                         lat: lat,
                         lng: lng
                     },
-                    map: map
+                    map: map,
+                    label: cnt + ""
                 });
                 markers.push(marker);
             };
@@ -62,11 +63,13 @@
 
             ws.onmessage = function(event) {
                 deleteAllMarkers();
-                var a = JSON.parse(event.data);
+                var a = JSON.parse(event.data), sum = 0;
                 for (var k in a) {
-                    addMarker(a[k].Lat, a[k].Lon);
+                    addMarker(a[k].Lat, a[k].Lon, a[k].Cnt);
+                    sum += a[k].Cnt;
                 }
 
+                /*
                 var markerCluster = new MarkerClusterer(
                     map,
                     markers,
@@ -74,7 +77,8 @@
                         imagePath: 'https://googlemaps.github.io/js-marker-clusterer/images/m'
                     }
                 );
-                console.log('ADDED ' + a.length + ' CNT');
+                */
+                console.log('ADDED '+ sum + ' CNT');
             };
 
             map.addListener('idle', showMarkers);

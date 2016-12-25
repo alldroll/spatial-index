@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/alldroll/spatial-index/clustering"
 	"github.com/alldroll/spatial-index/quadtree"
 	"github.com/gorilla/websocket"
 	"html/template"
@@ -21,11 +22,12 @@ var (
 	indexTemplate                    = template.Must(template.ParseFiles("client/index.html"))
 	upgrader                         = websocket.Upgrader{}
 	appConf                          = AppConf{}
-	quadTree      *quadtree.QuadTree = nil
+	db            *quadtree.QuadTree = nil
 )
 
 type TypeRes struct {
 	Lat, Lon float64
+	Cnt      int
 }
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
@@ -55,13 +57,29 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("recieve: %#v\n", coords)
 
-		points, _ := quadTree.GetPoints(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2)
+		points, _ := db.GetPoints(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2)
 
-		res := make([]TypeRes, len(points))
-		for i, p := range points {
+		spI, _ := quadtree.NewQuadTree(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2, 20)
+
+		eps := (coords.Lat2 - coords.Lat1) / 10
+
+		clustering := cluster.NewClustering(
+			spI,
+			points,
+			eps,
+			3,
+		)
+
+		clusters := clustering.DBScan(points, eps, 3)
+
+		log.Printf("recieve: %#v\n", clusters)
+
+		res := make([]TypeRes, len(clusters))
+		for i, p := range clusters {
 			res[i] = TypeRes{
-				Lat: p.GetX(),
-				Lon: p.GetY(),
+				Lat: p.GetCenter().GetX(),
+				Lon: p.GetCenter().GetY(),
+				Cnt: p.GetCount(),
 			}
 		}
 
@@ -100,10 +118,10 @@ const (
 )
 
 func generatePoints() {
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 400; i++ {
 		a := Pdf + rand.Float64()*(Pdb-Pdf)
 		b := Kdb + rand.Float64()*(Kdf-Kdb)
-		quadTree.Insert(a, b)
+		db.Insert(a, b)
 	}
 }
 
@@ -120,7 +138,7 @@ func main() {
 		return
 	}
 
-	quadTree, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 20)
+	db, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 20)
 	if err != nil {
 		log.Fatal(err)
 		return
