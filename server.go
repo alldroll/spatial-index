@@ -7,15 +7,29 @@ import (
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
+)
+
+const (
+	Kdb = 131.78635917382815
+	Kdf = 131.9923528261719
+	Pdb = 43.224515498757405
+	Pdf = 43.024050275744735
 )
 
 type AppConf struct {
 	Host         string
 	GoogleApiKey string
 	Zoom         int
+}
+
+type Markets struct {
+	Markers []struct {
+		Lat string
+		Lon string
+	}
 }
 
 var (
@@ -55,31 +69,23 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		log.Printf("recieve: %#v\n", coords)
-
 		points, _ := db.GetPoints(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2)
 
-		spI, _ := quadtree.NewQuadTree(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2, 20)
+		grid := cluster.NewGrid(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2, 3)
 
-		eps := (coords.Lat2 - coords.Lat1) / 10
+		grid.AddChunk(points)
 
-		clustering := cluster.NewClustering(
-			spI,
-			points,
-			eps,
-			3,
-		)
-
-		clusters := clustering.DBScan(points, eps, 3)
+		clusters := grid.GetClusters()
 
 		log.Printf("recieve: %#v\n", clusters)
 
 		res := make([]TypeRes, len(clusters))
 		for i, p := range clusters {
+			center := p.GetCenter()
 			res[i] = TypeRes{
-				Lat: p.GetCenter().GetX(),
-				Lon: p.GetCenter().GetY(),
-				Cnt: p.GetCount(),
+				Lat: center.GetX(),
+				Lon: center.GetY(),
+				Cnt: p.GetLength(),
 			}
 		}
 
@@ -110,25 +116,31 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	indexTemplate.Execute(w, data)
 }
 
-const (
-	Kdb = 131.78635917382815
-	Kdf = 131.9923528261719
-	Pdb = 43.224515498757405
-	Pdf = 43.024050275744735
-)
-
-func generatePoints() {
-	for i := 0; i < 400; i++ {
-		a := Pdf + rand.Float64()*(Pdb-Pdf)
-		b := Kdb + rand.Float64()*(Kdf-Kdb)
-		db.Insert(a, b)
-	}
-}
-
 func readConfig() error {
 	file, _ := os.Open("config/conf.json")
 	decoder := json.NewDecoder(file)
 	return decoder.Decode(&appConf)
+}
+
+func loadMarkets() {
+	points := Markets{}
+	file, _ := os.Open("markets_points.json")
+	decoder := json.NewDecoder(file)
+	e := decoder.Decode(&points)
+
+	if e != nil {
+		log.Fatal(e)
+		return
+	}
+
+	for i, point := range points.Markers {
+		x, _ := strconv.ParseFloat(point.Lat, 64)
+		y, _ := strconv.ParseFloat(point.Lon, 64)
+		db.Insert(x, y)
+		if false && i == 50 {
+			break
+		}
+	}
 }
 
 func main() {
@@ -138,13 +150,13 @@ func main() {
 		return
 	}
 
-	db, err = quadtree.NewQuadTree(Pdf, Pdb, Kdb, Kdf, 20)
+	db, err = quadtree.NewQuadTree(Pdf, Kdb, Pdb, Kdf, 20)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	generatePoints()
+	loadMarkets()
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", serveWS)

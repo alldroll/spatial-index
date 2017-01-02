@@ -28,6 +28,16 @@ func (self *Point) GetY() float64 {
 	return self.y
 }
 
+func (self *Point) SetX(x float64) *Point {
+	self.x = x
+	return self
+}
+
+func (self *Point) SetY(y float64) *Point {
+	self.y = y
+	return self
+}
+
 /**/
 type BoundaryBox struct {
 	bl, tr *Point /*bottom left, top right*/

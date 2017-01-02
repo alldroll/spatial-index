@@ -2,6 +2,7 @@ package quadtree
 
 import (
 	"log"
+	"math/rand"
 	"testing"
 )
 
@@ -80,5 +81,22 @@ func TestShouldBeOnePoint(t *testing.T) {
 
 	if len(points) != 1 {
 		t.Errorf("Should be 1 point, %u", points)
+	}
+}
+
+func BenchmarkGetPoints(b *testing.B) {
+	qt, err := NewQuadTree(0, 0, 1, 1, 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 0; i < 1000; i++ {
+		a := 0 + rand.Float64()
+		b := 0 + rand.Float64()
+		qt.Insert(a, b)
+	}
+
+	for n := 0; n < b.N; n++ {
+		qt.GetPoints(0.25, 0.25, 0.5, 0.5)
 	}
 }
