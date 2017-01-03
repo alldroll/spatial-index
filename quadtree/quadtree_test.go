@@ -96,7 +96,11 @@ func BenchmarkGetPoints(b *testing.B) {
 		qt.Insert(a, b)
 	}
 
+	b.ResetTimer()
+
 	for n := 0; n < b.N; n++ {
-		qt.GetPoints(0.25, 0.25, 0.5, 0.5)
+		a := 0 + rand.Float64()
+		b := 0 + rand.Float64()
+		qt.GetPoints(a, a+0.2, b, b+0.2)
 	}
 }

@@ -4,6 +4,10 @@ import (
 	"github.com/alldroll/spatial-index/geometry"
 )
 
+const (
+	totalChild = 4
+)
+
 type Grid struct {
 	root     *node
 	height   int
@@ -21,14 +25,6 @@ type Cluster struct {
 	length int
 	center *shape.Point
 }
-
-const (
-	topLeft     int = 0
-	topRight        = 1
-	bottomLeft      = 2
-	bottomRight     = 3
-	totalChild      = 4
-)
 
 func NewGrid(x1, y1, x2, y2 float64, height int) *Grid {
 	if x1 > x2 || y1 > y2 {
@@ -87,16 +83,16 @@ func (self *node) insertPoint(point *shape.Point) bool {
 
 	if self.cluster != nil {
 		self.cluster.length++
-		self.cluster.center.SetX(point.GetX() + self.cluster.center.GetX())
-		self.cluster.center.SetY(point.GetY() + self.cluster.center.GetY())
+		self.cluster.center.Plus(point)
 		return true
 	}
 
-	children := self.children
-	return children[topLeft].insertPoint(point) ||
-		children[topRight].insertPoint(point) ||
-		children[bottomLeft].insertPoint(point) ||
-		children[bottomRight].insertPoint(point)
+	success := false
+	for i := 0; i < totalChild && !success; i++ {
+		success = self.children[i].insertPoint(point)
+	}
+
+	return success
 }
 
 func (self *Grid) splitNodeUntil(curNode *node) {

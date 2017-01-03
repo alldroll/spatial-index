@@ -55,29 +55,33 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 	defer conn.Close()
 
-	coords := struct {
+	msg := struct {
 		Lat1 float64
 		Lon1 float64
 		Lat2 float64
 		Lon2 float64
+		Zoom int
 	}{}
 
 	for {
-		err := conn.ReadJSON(&coords)
+		err := conn.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("something with read message", err)
+			log.Printf("something with read msg", err)
 			break
 		}
 
-		points, _ := db.GetPoints(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2)
+		points, _ := db.GetPoints(msg.Lon1, msg.Lat1, msg.Lon2, msg.Lat2)
 
-		grid := cluster.NewGrid(coords.Lon1, coords.Lat1, coords.Lon2, coords.Lat2, 3)
+		zoom := (msg.Zoom - appConf.Zoom) + 3
+		if zoom <= 0 {
+			zoom = 0
+		}
+
+		grid := cluster.NewGrid(Pdf, Kdb, Pdb, Kdf, zoom)
 
 		grid.AddChunk(points)
 
 		clusters := grid.GetClusters()
-
-		log.Printf("recieve: %#v\n", clusters)
 
 		res := make([]TypeRes, len(clusters))
 		for i, p := range clusters {

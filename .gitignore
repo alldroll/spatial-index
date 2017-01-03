@@ -1,2 +1,4 @@
 conf.json
 markets_points.json
+*.test
+*.out

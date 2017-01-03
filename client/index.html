@@ -26,7 +26,8 @@
                     lat1: bounds.b.b,
                     lon1: bounds.f.f,
                     lat2: bounds.b.f,
-                    lon2: bounds.f.b
+                    lon2: bounds.f.b,
+                    zoom: map.getZoom()
                 };
 
                 console.log(JSON.stringify(toSend))

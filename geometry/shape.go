@@ -1,21 +1,21 @@
 package shape
 
-/**/
 type Point struct {
 	x, y float64
 }
 
-/**/
+type BoundaryBox struct {
+	bl, tr *Point /*bottom left, top right*/
+}
+
 func NewPoint(x, y float64) *Point {
 	return &Point{x, y}
 }
 
-/**/
 func (self *Point) EqualXY(x, y float64) bool {
 	return self.x == x && self.y == y
 }
 
-/* */
 func (self *Point) Equal(other *Point) bool {
 	return self.EqualXY(other.x, other.y)
 }
@@ -28,19 +28,9 @@ func (self *Point) GetY() float64 {
 	return self.y
 }
 
-func (self *Point) SetX(x float64) *Point {
-	self.x = x
-	return self
-}
-
-func (self *Point) SetY(y float64) *Point {
-	self.y = y
-	return self
-}
-
-/**/
-type BoundaryBox struct {
-	bl, tr *Point /*bottom left, top right*/
+func (self *Point) Plus(other *Point) {
+	self.x += other.x
+	self.y += other.y
 }
 
 func NewBoundaryBox(bl, tr *Point) *BoundaryBox {
