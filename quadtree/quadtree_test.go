@@ -90,7 +90,7 @@ func BenchmarkGetPoints(b *testing.B) {
 		log.Fatal(err)
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 200000; i++ {
 		a := 0 + rand.Float64()
 		b := 0 + rand.Float64()
 		qt.Insert(a, b)
@@ -99,8 +99,10 @@ func BenchmarkGetPoints(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		a := 0 + rand.Float64()
-		b := 0 + rand.Float64()
-		qt.GetPoints(a, a+0.2, b, b+0.2)
+		b.StopTimer()
+		x := 0 + rand.Float64()
+		y := 0 + rand.Float64()
+		b.StartTimer()
+		qt.GetPoints(0, 0, x+0.02, y+0.02)
 	}
 }

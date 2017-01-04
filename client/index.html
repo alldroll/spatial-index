@@ -10,88 +10,120 @@
     <div id="map"></div>
     <script type="text/javascript">
 
-        function initMap() {
-            var ws = new WebSocket("{{.WSPath}}");
-            var map = new google.maps.Map(document.getElementById('map'), {
-                center: {lat: 43.124365, lng: 131.889356},
-                zoom: {{.Zoom}}
-            });
+        var app = (function() {
+            var IMAGE_PATH = 'https://googlemaps.github.io/js-marker-clusterer/images/m',
+                IMAGE_EXT = 'png',
+                ICONS_COUNT = 5;
 
-            var markers = [];
+            function init() {
+                var ws = new WebSocket("{{.WSPath}}");
+                var map = new google.maps.Map(document.getElementById('map'), {
+                    center: {lat: 43.124365, lng: 131.889356},
+                    zoom: {{.Zoom}}
+                });
 
-            var showMarkers = function() {
-                var bounds = map.getBounds();
-                console.log(bounds);
-                var toSend = {
-                    lat1: bounds.b.b,
-                    lon1: bounds.f.f,
-                    lat2: bounds.b.f,
-                    lon2: bounds.f.b,
-                    zoom: map.getZoom()
+                var Cluster = function(data) {
+                    this.lat = data.lat;
+                    this.lng = data.lng;
+                    this.count = data.count;
                 };
 
-                console.log(JSON.stringify(toSend))
+                Cluster.prototype.getCount = function() {
+                    return this.count;
+                };
 
-                ws.send(JSON.stringify(toSend))
-            };
+                Cluster.prototype.getPosition = function() {
+                    return {lat: this.lat, lng: this.lng};
+                };
 
-            var addMarker = function(lat, lng, cnt) {
-                var marker = new google.maps.Marker({
-                    position: {
-                        lat: lat,
-                        lng: lng
-                    },
-                    map: map,
-                    label: cnt + ""
-                });
-                markers.push(marker);
-            };
+                Cluster.prototype.getIcon = function() {
+                    var dv = this.count || 0,
+                        index = 0;
 
-            function setMapOnAll(map) {
-                for (var i = 0; i < markers.length; i++) {
-                    markers[i].setMap(map);
-                }
-            }
-
-            var clearAllMarkers = function() {
-                setMapOnAll(null);
-            };
-
-            var deleteAllMarkers = function() {
-                clearAllMarkers(null);
-                markers = [];
-            }
-
-            ws.onmessage = function(event) {
-                deleteAllMarkers();
-                var a = JSON.parse(event.data), sum = 0;
-                for (var k in a) {
-                    addMarker(a[k].Lat, a[k].Lon, a[k].Cnt);
-                    sum += a[k].Cnt;
-                }
-
-                /*
-                var markerCluster = new MarkerClusterer(
-                    map,
-                    markers,
-                    {
-                        imagePath: 'https://googlemaps.github.io/js-marker-clusterer/images/m'
+                    while (dv !== 0 && index <= ICONS_COUNT) {
+                        dv = parseInt(dv / 10);
+                        index++;
                     }
-                );
-                */
-                console.log('ADDED '+ sum + ' CNT');
+
+                    return IMAGE_PATH + index + '.' + IMAGE_EXT;
+                };
+
+                Cluster.prototype.getLabel = function() {
+                    return this.count.toString();
+                };
+
+                Cluster.prototype.asMarker = function() {
+                    return new google.maps.Marker({
+                        position: this.getPosition(),
+                        map: map,
+                        label: this.getLabel(),
+                        icon: this.getIcon()
+                    });
+                }
+
+                var markers = [];
+
+                var getMarkers = function() {
+                    var bounds = map.getBounds();
+                    var toSend = {
+                        lat1: bounds.b.b,
+                        lng1: bounds.f.f,
+                        lat2: bounds.b.f,
+                        lng2: bounds.f.b,
+                        zoom: map.getZoom()
+                    };
+
+                    ws.send(JSON.stringify(toSend))
+                };
+
+                var addMarker = function(cluster) {
+                    markers.push(cluster.asMarker());
+                };
+
+                function setMapOnAll(map) {
+                    for (var i = 0; i < markers.length; i++) {
+                        markers[i].setMap(map);
+                    }
+                }
+
+                var clearAllMarkers = function() {
+                    setMapOnAll(null);
+                };
+
+                var deleteAllMarkers = function() {
+                    clearAllMarkers(null);
+                    markers = [];
+                }
+
+                ws.onmessage = function(event) {
+                    deleteAllMarkers();
+                    var a = JSON.parse(event.data), sum = 0, cluster;
+                    for (var k in a) {
+                        cluster = new Cluster(a[k]);
+                        addMarker(cluster);
+                        sum += cluster.getCount();
+                    }
+
+                    console.log('ADDED '+ sum + ' CNT');
+                };
+
+                map.addListener('idle', getMarkers);
+            }
+
+            return {
+                init: init
             };
 
-            map.addListener('idle', showMarkers);
-        }
+        })();
     </script>
 
     <script async defer
-            src="https://maps.googleapis.com/maps/api/js?key={{.ApiKey}}&callback=initMap">
+            src="https://maps.googleapis.com/maps/api/js?key={{.ApiKey}}&callback=app.init">
     </script>
-    <script async defer type="text/javascript"
-            src="https://googlemaps.github.io/js-marker-clusterer/src/markerclusterer.js">
-    </script>
+
+    <!--<script async defer type="text/javascript"-->
+            <!--src="https://googlemaps.github.io/js-marker-clusterer/src/markerclusterer.js">-->
+    <!--</script>-->
 
 </body>
 </html>

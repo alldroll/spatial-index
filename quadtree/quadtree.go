@@ -1,18 +1,14 @@
 package quadtree
 
-import (
-	"github.com/alldroll/spatial-index/geometry"
-)
+import "github.com/alldroll/spatial-index/geometry"
 
-/**/
 type QuadTree struct {
 	root   *node
 	length int
 }
 
-/**/
 type node struct {
-	box      *shape.BoundaryBox
+	*shape.BoundaryBox
 	points   []*shape.Point
 	children [totalChild]*node
 	length   int
@@ -21,14 +17,9 @@ type node struct {
 }
 
 const (
-	topLeft     int = 0
-	topRight        = 1
-	bottomLeft      = 2
-	bottomRight     = 3
-	totalChild      = 4
+	totalChild = 4
 )
 
-/**/
 type QuadTreeError struct {
 	msg string
 }
@@ -89,7 +80,7 @@ func newNode(box *shape.BoundaryBox, level int, capacity int) *node {
 }
 
 func (self *node) insertPoint(point *shape.Point) bool {
-	if !self.box.ContainsPoint(point) {
+	if !self.ContainsPoint(point) {
 		return false
 	}
 
@@ -103,15 +94,16 @@ func (self *node) insertPoint(point *shape.Point) bool {
 		self.splitNode()
 	}
 
-	children := self.children
-	return children[topLeft].insertPoint(point) ||
-		children[topRight].insertPoint(point) ||
-		children[bottomLeft].insertPoint(point) ||
-		children[bottomRight].insertPoint(point)
+	success := false
+	for i := 0; i < totalChild && !success; i++ {
+		success = self.children[i].insertPoint(point)
+	}
+
+	return success
 }
 
 func (self *node) splitNode() {
-	boxes := self.box.Quarter()
+	boxes := self.Quarter()
 	nlevel := self.level + 1
 	capacity := self.capacity
 	for i := 0; i < totalChild; i++ {
@@ -120,8 +112,7 @@ func (self *node) splitNode() {
 }
 
 func (self *node) getPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
-	//we are not in valid node
-	if self == nil || !self.box.Intersect(area) {
+	if !self.Intersect(area) {
 		return []*shape.Point{}
 	}
 
@@ -134,10 +125,9 @@ func (self *node) getPointsFromArea(area *shape.BoundaryBox) []*shape.Point {
 
 	if !self.isLeaf() {
 		children := self.children
-		result = append(result, children[topLeft].getPointsFromArea(area)...)
-		result = append(result, children[topRight].getPointsFromArea(area)...)
-		result = append(result, children[bottomLeft].getPointsFromArea(area)...)
-		result = append(result, children[bottomRight].getPointsFromArea(area)...)
+		for i := 0; i < totalChild; i++ {
+			result = append(result, children[i].getPointsFromArea(area)...)
+		}
 	}
 
 	return result
@@ -148,5 +138,5 @@ func (self *node) getPoints() []*shape.Point {
 }
 
 func (self *node) isLeaf() bool {
-	return self.children[topRight] == nil
+	return self.children[0] == nil
 }

@@ -2,14 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/alldroll/spatial-index/clustering"
-	"github.com/alldroll/spatial-index/quadtree"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 const (
@@ -25,24 +23,12 @@ type AppConf struct {
 	Zoom         int
 }
 
-type Markets struct {
-	Markers []struct {
-		Lat string
-		Lon string
-	}
-}
-
 var (
-	indexTemplate                    = template.Must(template.ParseFiles("client/index.html"))
-	upgrader                         = websocket.Upgrader{}
-	appConf                          = AppConf{}
-	db            *quadtree.QuadTree = nil
+	indexTemplate = template.Must(template.ParseFiles("client/index.html"))
+	upgrader      = websocket.Upgrader{}
+	appConf       = AppConf{}
+	service       *Service
 )
-
-type TypeRes struct {
-	Lat, Lon float64
-	Cnt      int
-}
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("new connection")
@@ -55,11 +41,17 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 	defer conn.Close()
 
+	type response struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+		Cnt int     `json:"count"`
+	}
+
 	msg := struct {
 		Lat1 float64
-		Lon1 float64
+		Lng1 float64
 		Lat2 float64
-		Lon2 float64
+		Lng2 float64
 		Zoom int
 	}{}
 
@@ -70,26 +62,25 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		points, _ := db.GetPoints(msg.Lon1, msg.Lat1, msg.Lon2, msg.Lat2)
-
 		zoom := (msg.Zoom - appConf.Zoom) + 3
 		if zoom <= 0 {
 			zoom = 0
 		}
 
-		grid := cluster.NewGrid(Pdf, Kdb, Pdb, Kdf, zoom)
+		clusters := service.RangeQuery(
+			msg.Lng1,
+			msg.Lat1,
+			msg.Lng2,
+			msg.Lat2,
+			zoom,
+		)
 
-		grid.AddChunk(points)
-
-		clusters := grid.GetClusters()
-
-		res := make([]TypeRes, len(clusters))
+		res := make([]response, len(clusters))
 		for i, p := range clusters {
-			center := p.GetCenter()
-			res[i] = TypeRes{
-				Lat: center.GetX(),
-				Lon: center.GetY(),
-				Cnt: p.GetLength(),
+			res[i] = response{
+				Lat: p.GetX(),
+				Lng: p.GetY(),
+				Cnt: p.GetCount(),
 			}
 		}
 
@@ -126,25 +117,11 @@ func readConfig() error {
 	return decoder.Decode(&appConf)
 }
 
-func loadMarkets() {
-	points := Markets{}
-	file, _ := os.Open("markets_points.json")
-	decoder := json.NewDecoder(file)
-	e := decoder.Decode(&points)
-
-	if e != nil {
-		log.Fatal(e)
-		return
-	}
-
-	for i, point := range points.Markers {
-		x, _ := strconv.ParseFloat(point.Lat, 64)
-		y, _ := strconv.ParseFloat(point.Lon, 64)
-		db.Insert(x, y)
-		if false && i == 50 {
-			break
-		}
-	}
+func initService() {
+	service = NewService(
+		NewInMemoryRepo(Pdf, Kdb, Pdb, Kdf, "config/markets_points.json"),
+		NewRunTimeClustering(Pdf, Kdb, Pdb, Kdf),
+	)
 }
 
 func main() {
@@ -154,18 +131,12 @@ func main() {
 		return
 	}
 
-	db, err = quadtree.NewQuadTree(Pdf, Kdb, Pdb, Kdf, 20)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
+	initService()
 
-	loadMarkets()
+	r := mux.NewRouter()
 
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", serveWS)
-	err = http.ListenAndServe("localhost:8080", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	r.HandleFunc("/", serveHome)
+	r.HandleFunc("/ws", serveWS)
+
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

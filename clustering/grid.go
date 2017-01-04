@@ -9,21 +9,16 @@ const (
 )
 
 type Grid struct {
-	root     *node
+	root     *cell
 	height   int
-	clusters []*Cluster
+	clusters []*shape.Cluster
 }
 
-type node struct {
-	box      *shape.BoundaryBox
-	children [totalChild]*node
+type cell struct {
+	*shape.BoundaryBox
+	children [totalChild]*cell
 	level    int
-	cluster  *Cluster
-}
-
-type Cluster struct {
-	length int
-	center *shape.Point
+	cluster  *shape.Cluster
 }
 
 func NewGrid(x1, y1, x2, y2 float64, height int) *Grid {
@@ -35,10 +30,10 @@ func NewGrid(x1, y1, x2, y2 float64, height int) *Grid {
 		shape.NewPoint(x1, y1),
 		shape.NewPoint(x2, y2),
 	)
-	root := newNode(global, 0)
-	grid := &Grid{root, height, make([]*Cluster, 0)}
+	root := newCell(global, 0)
+	grid := &Grid{root, height, make([]*shape.Cluster, 0)}
 
-	grid.splitNodeUntil(root)
+	grid.splitCellUntil(root)
 	return grid
 }
 
@@ -48,10 +43,10 @@ func (self *Grid) AddChunk(chunk []*shape.Point) {
 	}
 }
 
-func (self *Grid) GetClusters() []*Cluster {
-	res := make([]*Cluster, 0)
+func (self *Grid) GetClusters() []*shape.Cluster {
+	res := make([]*shape.Cluster, 0)
 	for _, cluster := range self.clusters {
-		if cluster.length > 0 {
+		if cluster.GetCount() > 0 {
 			res = append(res, cluster)
 		}
 	}
@@ -59,31 +54,22 @@ func (self *Grid) GetClusters() []*Cluster {
 	return res
 }
 
-func (self *Cluster) GetCenter() *shape.Point {
-	return shape.NewPoint(self.center.GetX()/float64(self.length), self.center.GetY()/float64(self.length))
-}
-
-func (self *Cluster) GetLength() int {
-	return self.length
-}
-
-func newNode(box *shape.BoundaryBox, level int) *node {
-	return &node{
+func newCell(box *shape.BoundaryBox, level int) *cell {
+	return &cell{
 		box,
-		[totalChild]*node{nil, nil, nil, nil},
+		[totalChild]*cell{nil, nil, nil, nil},
 		level,
 		nil,
 	}
 }
 
-func (self *node) insertPoint(point *shape.Point) bool {
-	if !self.box.ContainsPoint(point) {
+func (self *cell) insertPoint(point *shape.Point) bool {
+	if !self.ContainsPoint(point) {
 		return false
 	}
 
 	if self.cluster != nil {
-		self.cluster.length++
-		self.cluster.center.Plus(point)
+		self.cluster.AddPoint(point)
 		return true
 	}
 
@@ -95,24 +81,24 @@ func (self *node) insertPoint(point *shape.Point) bool {
 	return success
 }
 
-func (self *Grid) splitNodeUntil(curNode *node) {
-	if self.height <= curNode.level {
-		cluster := &Cluster{0, shape.NewPoint(0, 0)}
+func (self *Grid) splitCellUntil(curCell *cell) {
+	if self.height <= curCell.level {
+		cluster := shape.NewCluster(shape.NewPoint(0, 0), 0)
 		self.clusters = append(self.clusters, cluster)
-		curNode.cluster = cluster
+		curCell.cluster = cluster
 		return
 	}
 
-	curNode.splitNode()
+	curCell.splitCell()
 	for i := 0; i < totalChild; i++ {
-		self.splitNodeUntil(curNode.children[i])
+		self.splitCellUntil(curCell.children[i])
 	}
 }
 
-func (self *node) splitNode() {
-	boxes := self.box.Quarter()
+func (self *cell) splitCell() {
+	boxes := self.Quarter()
 	nlevel := self.level + 1
 	for i := 0; i < totalChild; i++ {
-		self.children[i] = newNode(boxes[i], nlevel)
+		self.children[i] = newCell(boxes[i], nlevel)
 	}
 }

@@ -8,6 +8,11 @@ type BoundaryBox struct {
 	bl, tr *Point /*bottom left, top right*/
 }
 
+type Cluster struct {
+	center *Point
+	count  int
+}
+
 func NewPoint(x, y float64) *Point {
 	return &Point{x, y}
 }
@@ -35,6 +40,14 @@ func (self *Point) Plus(other *Point) {
 
 func NewBoundaryBox(bl, tr *Point) *BoundaryBox {
 	return &BoundaryBox{bl, tr}
+}
+
+func (self *BoundaryBox) GetBottomLeft() *Point {
+	return self.bl
+}
+
+func (self *BoundaryBox) GetTopRight() *Point {
+	return self.tr
 }
 
 func (self *BoundaryBox) Equal(other *BoundaryBox) bool {
@@ -80,4 +93,35 @@ func (self *BoundaryBox) Area() float64 {
 func (self *BoundaryBox) Intersect(other *BoundaryBox) bool {
 	return self.tr.x >= other.bl.x && other.tr.x >= self.bl.x &&
 		self.tr.y >= other.bl.y && other.tr.y >= self.bl.y
+}
+
+func NewCluster(point *Point, count int) *Cluster {
+	return &Cluster{point, count}
+}
+
+func (self *Cluster) GetX() float64 {
+	res := self.center.GetX()
+	if self.count > 0 {
+		res = res / float64(self.count)
+	}
+
+	return res
+}
+
+func (self *Cluster) GetY() float64 {
+	res := self.center.GetY()
+	if self.count > 0 {
+		res = res / float64(self.count)
+	}
+
+	return res
+}
+
+func (self *Cluster) GetCount() int {
+	return self.count
+}
+
+func (self *Cluster) AddPoint(point *Point) {
+	self.count++
+	self.center.Plus(point)
 }

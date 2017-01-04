@@ -7,8 +7,7 @@ import (
 )
 
 func BenchmarkClustering(b *testing.B) {
-	k := 10000
-	grid := NewGrid(0, 0, 1, 1, 3)
+	k := 200000
 
 	b.StopTimer()
 	points := make([]*shape.Point, k)
@@ -20,6 +19,7 @@ func BenchmarkClustering(b *testing.B) {
 	b.StartTimer()
 
 	for n := 0; n < b.N; n++ {
+		grid := NewGrid(0, 0, 1, 1, 3)
 		grid.AddChunk(points)
 		grid.GetClusters()
 	}
