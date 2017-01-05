@@ -1,5 +1,9 @@
 package shape
 
+import "math"
+
+const tolerance = 0.000001
+
 type Point struct {
 	x, y float64
 }
@@ -18,7 +22,7 @@ func NewPoint(x, y float64) *Point {
 }
 
 func (self *Point) EqualXY(x, y float64) bool {
-	return self.x == x && self.y == y
+	return math.Abs(self.x-x) < tolerance && math.Abs(self.y-y) < tolerance
 }
 
 func (self *Point) Equal(other *Point) bool {
