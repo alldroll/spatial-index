@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	Kdb = 131.78635917382815
-	Kdf = 131.9923528261719
-	Pdb = 43.224515498757405
-	Pdf = 43.024050275744735
+	Kdb = -180.0 //131.78635917382815
+	Kdf = 180.0  //131.9923528261719
+	Pdb = 90.0   //43.224515498757405
+	Pdf = -90.0  //43.024050275744735
 )
 
 type AppConf struct {
@@ -65,6 +65,10 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		zoom := (msg.Zoom - appConf.Zoom) + 3
 		if zoom <= 0 {
 			zoom = 0
+		}
+
+		if zoom > 3 {
+			zoom = 3
 		}
 
 		clusters := service.RangeQuery(

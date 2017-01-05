@@ -9,7 +9,7 @@ type repo interface {
 }
 
 type clustering interface {
-	GetClusters(points []*shape.Point, zoom int) []*shape.Cluster
+	GetClusters(points []*shape.Point, x1, y1, x2, y2 float64, zoom int) []*shape.Cluster
 }
 
 type Service struct {
@@ -23,5 +23,5 @@ func NewService(si repo, cl clustering) *Service {
 
 func (self *Service) RangeQuery(x1, y1, x2, y2 float64, zoom int) []*shape.Cluster {
 	points := self.si.RangeQuery(x1, y1, x2, y2)
-	return self.cl.GetClusters(points, zoom)
+	return self.cl.GetClusters(points, x1, y1, x2, y2, zoom)
 }

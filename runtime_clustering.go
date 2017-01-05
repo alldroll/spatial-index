@@ -15,9 +15,11 @@ func NewRunTimeClustering(x1, y1, x2, y2 float64) *RunTimeClustering {
 	}
 }
 
-func (self *RunTimeClustering) GetClusters(points []*shape.Point, zoom int) []*shape.Cluster {
-	bl, tr := self.GetBottomLeft(), self.GetTopRight()
-	grid := cluster.NewGrid(bl.GetX(), bl.GetY(), tr.GetX(), tr.GetY(), zoom)
+func (self *RunTimeClustering) GetClusters(points []*shape.Point, x1, y1, x2, y2 float64, zoom int) []*shape.Cluster {
+	//bl, tr := self.GetBottomLeft(), self.GetTopRight()
+	//grid := cluster.NewGrid(bl.GetX(), bl.GetY(), tr.GetX(), tr.GetY(), zoom)
+
+	grid := cluster.NewGrid(x1, y1, x2, y2, zoom)
 	grid.AddChunk(points)
 	return grid.GetClusters()
 }
