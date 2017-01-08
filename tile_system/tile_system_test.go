@@ -53,3 +53,31 @@ func TestTileXYToQuadKey(t *testing.T) {
 		}
 	}
 }
+
+func TestQuadKeyToTileXY(t *testing.T) {
+	cases := []struct {
+		quadKey string
+		x, y    int
+		zoom    uint
+	}{
+		{
+			"213",
+			3, 5, 3,
+		},
+		{
+			"03130",
+			14, 10, 5,
+		},
+	}
+
+	for _, c := range cases {
+		x, y, zoom := QuadKeyToTileXY(c.quadKey)
+		if x != c.x || y != c.y || zoom != c.zoom {
+			t.Errorf(
+				"TestFail, expected {%d %d %u}, got {%d %d %u}",
+				c.x, c.y, c.zoom,
+				x, y, zoom,
+			)
+		}
+	}
+}
