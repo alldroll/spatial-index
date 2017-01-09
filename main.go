@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const (
@@ -27,7 +28,7 @@ var (
 	indexTemplate = template.Must(template.ParseFiles("client/index.html"))
 	upgrader      = websocket.Upgrader{}
 	appConf       = AppConf{}
-	service       *Service
+	service       *TileService
 )
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
@@ -62,15 +63,9 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		zoom := (msg.Zoom - appConf.Zoom) + 3
-		if zoom <= 0 {
-			zoom = 0
-		}
+		start := time.Now()
 
-		if zoom > 3 {
-			zoom = 3
-		}
-
+		zoom := msg.Zoom
 		clusters := service.RangeQuery(
 			msg.Lng1,
 			msg.Lat1,
@@ -87,6 +82,10 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 				Cnt: p.GetCount(),
 			}
 		}
+
+		elapsed := time.Since(start)
+
+		log.Printf("Took %s\n", elapsed)
 
 		err = conn.WriteJSON(res)
 		if err != nil {
@@ -122,9 +121,10 @@ func readConfig() error {
 }
 
 func initService() {
-	service = NewService(
-		NewInMemoryRepo(Pdf, Kdb, Pdb, Kdf, "config/markets_points.json"),
-		NewRunTimeClustering(Pdf, Kdb, Pdb, Kdf),
+	service = NewTileService(
+		//NewInMemoryRepo(Pdf, Kdb, Pdb, Kdf, "config/markets_points.json"),
+		NewTileRepo("config/markets_points.json"),
+		//NewRunTimeClustering(Pdf, Kdb, Pdb, Kdf),
 	)
 }
 

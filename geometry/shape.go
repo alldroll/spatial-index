@@ -121,6 +121,10 @@ func (self *Cluster) GetY() float64 {
 	return res
 }
 
+func (self *Cluster) GetCenter() *Point {
+	return NewPoint(self.GetX(), self.GetY())
+}
+
 func (self *Cluster) GetCount() int {
 	return self.count
 }

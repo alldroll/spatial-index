@@ -68,7 +68,7 @@
                 var getMarkers = function(flush) {
                     var bounds = map.getBounds();
                     var wasChanged = false;
-
+                    /*
                     if (flush) {
                         curBounds = null;
                     }
@@ -88,6 +88,7 @@
                     }
 
                     bounds = curBounds;
+            */
 
                     var toSend = {
                         lat1: bounds.b.b,
@@ -145,9 +146,9 @@
                     console.log('ADDED '+ sum + ' CNT');
                 };
 
-                map.addListener('idle', getMarkers);
+                map.addListener('idle', function() {getMarkers(true); });
 
-                map.addListener('zoom_changed', function() {getMarkers(true);});
+                //map.addListener('zoom_changed', function() {getMarkers(true);});
             }
 
             return {

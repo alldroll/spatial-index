@@ -13,7 +13,7 @@ type InMemoryRepo struct {
 	qt *quadtree.QuadTree
 }
 
-type SourceT struct {
+type sourceT struct {
 	Points []struct {
 		Lat string
 		Lng string
@@ -49,7 +49,7 @@ func (self *InMemoryRepo) RemovePoint(x, y float64) {
 }
 
 func (self *InMemoryRepo) loadMarkets(source string) {
-	sourceT := SourceT{}
+	sourceT := sourceT{}
 	file, _ := os.Open(source)
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&sourceT)
