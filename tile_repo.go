@@ -30,21 +30,10 @@ func NewTileRepo(source string) *TileRepo {
 func (self *TileRepo) RangeQuery(x1, y1, x2, y2 float64, zoom uint) (string, []*trie.NodeData) {
 	tileMinX, tileMinY := tile_system.LatLngToTileXY(x1, y1, zoom)
 	tileMaxX, tileMaxY := tile_system.LatLngToTileXY(x2, y2, zoom)
+	return self.RangeQueryTiles(tileMinX, tileMinY, tileMaxX, tileMaxY, zoom)
+}
 
-	/*
-		if tileMinX > tileMaxX {
-			a := tileMinX
-			tileMinX = tileMaxX
-			tileMaxX = a
-		}
-
-		if tileMinY > tileMaxY {
-			a := tileMinY
-			tileMinY = tileMaxY
-			tileMaxY = a
-		}
-	*/
-
+func (self *TileRepo) RangeQueryTiles(tileMinX, tileMinY, tileMaxX, tileMaxY int, zoom uint) (string, []*trie.NodeData) {
 	var quadKeys []string
 	for i, len1 := 0, (tileMaxX - tileMinX); i <= len1; i++ {
 		for j, len2 := 0, (tileMinY - tileMaxY); j <= len2; j++ {
@@ -54,11 +43,6 @@ func (self *TileRepo) RangeQuery(x1, y1, x2, y2 float64, zoom uint) (string, []*
 	}
 
 	commonPrefix := LCP(quadKeys)
-
-	log.Printf(
-		"%d, %f, %f, %f, %f, #, (%d, %d), (%d, %d), # %v \n",
-		zoom, x1, y1, x2, y2, tileMinX, tileMinY, tileMaxX, tileMaxY, quadKeys,
-	)
 
 	var data []*trie.NodeData
 	for _, quadKey := range quadKeys {

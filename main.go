@@ -49,11 +49,12 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := struct {
-		Lat1 float64
-		Lng1 float64
-		Lat2 float64
-		Lng2 float64
-		Zoom int
+		Lat1       float64
+		Lng1       float64
+		Lat2       float64
+		Lng2       float64
+		TileBounds [4]int
+		Zoom       int
 	}{}
 
 	for {
@@ -66,11 +67,11 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		zoom := msg.Zoom
-		clusters := service.RangeQuery(
-			msg.Lng1,
-			msg.Lat1,
-			msg.Lng2,
-			msg.Lat2,
+		clusters := service.RangeQueryTiles(
+			msg.TileBounds[0],
+			msg.TileBounds[1],
+			msg.TileBounds[2],
+			msg.TileBounds[3],
 			zoom,
 		)
 
