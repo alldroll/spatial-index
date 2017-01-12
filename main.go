@@ -25,7 +25,7 @@ type AppConf struct {
 }
 
 var (
-	indexTemplate = template.Must(template.ParseFiles("client/index.html"))
+	indexTemplate = template.Must(template.ParseFiles("public/index.html"))
 	upgrader      = websocket.Upgrader{}
 	appConf       = AppConf{}
 	service       *TileService
@@ -142,6 +142,8 @@ func main() {
 
 	r.HandleFunc("/", serveHome)
 	r.HandleFunc("/ws", serveWS)
+
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
