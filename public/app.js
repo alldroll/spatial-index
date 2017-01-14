@@ -1,18 +1,20 @@
 (function(root, factory) {
     if ("function" === typeof define && define.amd) {
-        define("app", ["google_maps", "remote_manager"], factory);
+        define("app", ["google_maps", "remote_manager", "tile_system"], factory);
     } else if ("object" === typeof module && module.exports) {
         module.exports = factory(
             require('google_maps'),
-            require('remote_manager')
+            require('remote_manager'),
+            require('tile_system')
         );
     } else {
         root.App = factory(
             root.google,
-            root.RemoteManager
+            root.RemoteManager,
+            root.TileSystem
         );
     }
-})(this, function(google, RemoteManager) {
+})(this, function(google, RemoteManager, TileSystem) {
 
     var IMAGE_PATH = 'https://googlemaps.github.io/js-marker-clusterer/images/m',
         IMAGE_EXT = 'png',
@@ -24,16 +26,35 @@
             zoom: cfg.zoom
         });
 
+        function CoordMapType() {
+            this.tileSize = new google.maps.Size(256, 256);
+        }
+        
+        CoordMapType.prototype.getTile = function(coord, zoom, ownerDocument) {
+            var div = ownerDocument.createElement('div');
+            div.innerHTML = coord + '; ' + TileSystem.tileXYToQuadKey(coord.x, coord.y, zoom);
+            div.style.width = this.tileSize.width + 'px';
+            div.style.height = this.tileSize.height + 'px';
+            div.style.fontSize = '10';
+            div.style.borderStyle = 'solid';
+            div.style.borderWidth = '1px';
+            div.style.borderColor = '#AAAAAA';
+            return div;
+        };
+
+        map.overlayMapTypes.insertAt(0, new CoordMapType());
+
         var onPointsRecieved = function(data) {
-            deleteAllMarkers();
-            var a = data, sum = 0, cluster;
-            for (var k in a) {
-                cluster = new Cluster(a[k]);
+            var sum = 0, cluster;
+
+            for (var k in data) {
+                cluster = new Cluster(data[k]);
                 addMarker(cluster);
                 sum += cluster.getCount();
             }
 
             console.log('ADDED '+ sum + ' CNT');
+            console.log('TOTAL '+ markers.length + ' CNT');
         };
 
         var remoteManager = new RemoteManager(
@@ -101,6 +122,10 @@
             clearAllMarkers(null);
             markers = [];
         };
+
+        map.addListener('zoom_changed', function() {
+            deleteAllMarkers();
+        });
     }
 
     return {

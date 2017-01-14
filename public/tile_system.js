@@ -18,7 +18,7 @@
         };
     }
 
-    return {
+    var TileSystem =  {
         getTileXY: function(lat, lng, zoom) {
             var scale = 1 << zoom,
                 worldCoords = project(lat, lng);
@@ -26,6 +26,32 @@
                 x: Math.floor(worldCoords.x * scale / TILE_SIZE),
                 y: Math.floor(worldCoords.y * scale / TILE_SIZE)
             };
+        },
+
+        tileXYToQuadKey: function(x, y, zoom) {
+            var buffer = [], digit, mask;
+            for (var i = zoom; i > 0; --i) {
+                digit = 0;
+                mask = 1 << (i - 1);
+                if ((x & mask) !== 0) {
+                    ++digit
+                }
+
+                if ((y & mask) !== 0) {
+                    digit += 2;
+                }
+
+                buffer.push(digit);
+            }
+
+            return buffer.join('');
+        },
+
+        getQuadKey: function(lat, lng, zoom) {
+            var tile = TileSystem.getTileXY(lat, lng, zoom);
+            return TileSystem.tileXYToQuadKey(tile.x, tile.y, zoom);
         }
     };
+
+    return TileSystem;
 });

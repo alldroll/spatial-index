@@ -61,10 +61,10 @@ func TestTrieLookup(t *testing.T) {
 	}
 }
 
-func BenchmarkGetPrefixes(b *testing.B) {
+func BenchmarkGetPrefixesCount(b *testing.B) {
 	trie := NewTrie()
 
-	for i := 0; i < 200000; i++ {
+	for i := 0; i < 200; i++ {
 		quadKey := randStringBytes(23)
 		trie.AddWord(quadKey, i)
 	}
@@ -74,9 +74,9 @@ func BenchmarkGetPrefixes(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		b.StopTimer()
 		prefixLen := rand.Intn(23)
-		prefix := randStringBytes(prefixLen)
+		word := randStringBytes(prefixLen)
 		b.StartTimer()
-		trie.Lookup(prefix)
+		trie.GetPrefixesCount(word)
 	}
 }
 

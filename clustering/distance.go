@@ -12,20 +12,14 @@ type ClusterBuilder struct {
 	factor      float64
 }
 
-func NewClusterBuilder(factor float64) *ClusterBuilder {
+func NewClusterBuilder(bounds *shape.BoundaryBox, factor float64) *ClusterBuilder {
 	return &ClusterBuilder{
-		make([]*shape.Cluster, 0), nil, 0, factor,
+		make([]*shape.Cluster, 0), bounds,
+		factor * boundsSize(bounds), factor,
 	}
 }
 
 func (self *ClusterBuilder) AddPoint(point *shape.Point) {
-	if self.bounds == nil {
-		self.bounds = shape.NewBoundaryBox(point, point)
-	} else if !self.bounds.ContainsPoint(point) {
-		self.bounds = self.bounds.ExtendPoint(point)
-		self.maxDistance = self.factor * boundsSize(self.bounds)
-	}
-
 	var nearest *shape.Cluster = nil
 	for _, cluster := range self.clusters {
 		if cluster.GetCenter().Equal(point) {

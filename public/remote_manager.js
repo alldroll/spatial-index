@@ -15,10 +15,10 @@
         );
     }
 })(this, function(google, TileSystem, Inherence) {
-    var RemoteManager = function(map, wsPath, onPointRecieved) {
+    var RemoteManager = function(map, wsPath, onPointReceived) {
         this.map = map;
         this.ws = new WebSocket(wsPath);
-        this.onPointRecieved = onPointRecieved;
+        this.onPointReceived = onPointReceived;
     };
 
     RemoteManager.prototype.run = function() {
@@ -33,33 +33,22 @@
 
     RemoteManager.prototype._fetchPoints = function() {
         var bounds = this.bounds, zoom = this.zoom;
-
-        var lat1 = bounds.getSouthWest().lat()
-            lng1 = bounds.getSouthWest().lng(),
-            lat2 = bounds.getNorthEast().lat(),
-            lng2 = bounds.getNorthEast().lng();
-
-        var tileB = TileSystem.getTileXY(lat1, lng1, zoom),
-            tileT = TileSystem.getTileXY(lat2, lng2, zoom);
-
         this._send({
-            lat1: lat1,
-            lng1: lng1,
-            lat2: lat2,
-            lng2: lng2,
-            tileBounds: [tileB.x, tileB.y, tileT.x, tileT.y],
+            lat1: bounds.getSouthWest().lat(),
+            lng1: bounds.getSouthWest().lng(),
+            lat2: bounds.getNorthEast().lat(),
+            lng2: bounds.getNorthEast().lng(),
             zoom: zoom
         });
     };
 
     RemoteManager.prototype._send = function(toSend) {
-        console.log(toSend);
         this.ws.send(JSON.stringify(toSend))
     };
 
     RemoteManager.prototype._onMessage = function(event) {
         var data = JSON.parse(event.data);
-        this.onPointRecieved(data);
+        this.onPointReceived(data);
     };
 
     RemoteManager.prototype._updateState = function() {
@@ -72,7 +61,17 @@
 
         function CachedRemoteManager() {
             CachedRemoteManager.__super__.constructor.apply(this, arguments);
+            var that = this;
             this.cache = {};
+            this.originalCallback = this.onPointReceived;
+            this.onPointReceived = (function(postHook, func) {
+                return function(data, ignoreHook) {
+                    func.call(this, data);
+                    if (!ignoreHook) {
+                        postHook.call(this, data);
+                    }
+                };
+            })(this._postHookOnPointReceived, this.onPointReceived);
         }
 
         return CachedRemoteManager;
@@ -83,6 +82,18 @@
         CachedRemoteManager.__super__._updateState.apply(this);
         if (zoom && zoom != this.zoom) {
             this.cache = {};
+        }
+    };
+
+    CachedRemoteManager.prototype._postHookOnPointReceived = function(data) {
+        var zoom = this.zoom, tile, key;
+        for (var k in data) {
+            key = TileSystem.getQuadKey(data[k].lat, data[k].lng, zoom);
+            if (!this.cache.hasOwnProperty(key)) {
+                this.cache[key] = [];
+            }
+
+            this.cache[key].push(data[k]);
         }
     };
 
@@ -97,32 +108,38 @@
         var tileB = TileSystem.getTileXY(lat1, lng1, zoom),
             tileT = TileSystem.getTileXY(lat2, lng2, zoom);
 
-        var tileX, tileY, key, points = [];
+        var tileX, tileY, key, points = [], unvisitedQuadKeys = [];
 
-        for (var i = 0, len1 = (tileT.x - tileB.x); i < len1; ++i) {
-            for (var j = 0, len2 = (tileT.y - tileB.y); i < len2; ++j) {
+        for (var i = 0, len1 = (tileT.x - tileB.x); i <= len1; ++i) {
+            for (var j = 0, len2 = (tileB.y - tileT.y); j <= len2; ++j) {
                 tileX = tileB.x + i;
-                tileY = tileB.y + j;
-                key = tileX + '_' + tileY;
+                tileY = tileT.y + j;
+                key = TileSystem.tileXYToQuadKey(tileX, tileY, zoom);
 
                 if (this.cache.hasOwnProperty(key)) {
                     points.concat(this.cache[key]);
                 } else {
-
+                    unvisitedQuadKeys.push(key);
+                    this.cache[key] = [];
                 }
             }
         }
 
-        this._send({
-            lat1: lat1,
-            lng1: lng1,
-            lat2: lat2,
-            lng2: lng2,
-            tileBounds: [tileB.x, tileB.y, tileT.x, tileT.y],
-            zoom: zoom
-        });
-    };
+        if (points.length) {
+            this.onPointReceived(points, true);
+        }
 
+        if (unvisitedQuadKeys.length) {
+            this._send({
+                lat1: lat1,
+                lng1: lng1,
+                lat2: lat2,
+                lng2: lng2,
+                quadKeys: unvisitedQuadKeys,
+                zoom: zoom
+            });
+        }
+    };
 
     return CachedRemoteManager;
 });

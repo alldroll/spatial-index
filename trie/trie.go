@@ -14,7 +14,8 @@ type Trie struct {
 
 type node struct {
 	NodeData
-	edges [4]*node
+	edges    [4]*node
+	prefixes int
 }
 
 type NodeData struct {
@@ -48,6 +49,10 @@ func (self *Trie) Lookup(prefix string) ([]*NodeData, error) {
 	return data, nil
 }
 
+func (self *Trie) GetPrefixesCount(word string) int {
+	return self.root.getPrefixesCount(word, 0)
+}
+
 func (self *NodeData) GetWord() string {
 	return self.word
 }
@@ -58,7 +63,7 @@ func (self *NodeData) GetData() []IData {
 
 func newNode() *node {
 	return &node{
-		NodeData{"", make([]IData, 0)}, [4]*node{nil, nil, nil, nil},
+		NodeData{"", make([]IData, 0)}, [4]*node{nil, nil, nil, nil}, 0,
 	}
 }
 
@@ -69,6 +74,7 @@ func (self *node) addWord(word string, iter int, data IData) {
 		return
 	}
 
+	self.prefixes++
 	c := string(word[iter])
 	k, _ := strconv.Atoi(c)
 	if self.edges[k] == nil {
@@ -98,4 +104,21 @@ func (self *node) lookup(prefix string, iter int, data *[]*NodeData) {
 			}
 		}
 	}
+}
+
+func (self *node) getPrefixesCount(word string, iter int) int {
+	if len(word) == iter {
+		return self.prefixes
+	}
+
+	if len(word) > iter {
+		c := string(word[iter])
+		k, _ := strconv.Atoi(c)
+		iter++
+		if self.edges[k] != nil {
+			return self.edges[k].getPrefixesCount(word, iter)
+		}
+	}
+
+	return 0
 }

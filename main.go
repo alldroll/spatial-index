@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/alldroll/spatial-index/geometry"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"html/template"
@@ -9,13 +10,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-)
-
-const (
-	Kdb = -180.0 //131.78635917382815
-	Kdf = 180.0  //131.9923528261719
-	Pdb = 90.0   //43.224515498757405
-	Pdf = -90.0  //43.024050275744735
 )
 
 type AppConf struct {
@@ -49,12 +43,12 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := struct {
-		Lat1       float64
-		Lng1       float64
-		Lat2       float64
-		Lng2       float64
-		TileBounds [4]int
-		Zoom       int
+		Lat1     float64
+		Lng1     float64
+		Lat2     float64
+		Lng2     float64
+		QuadKeys []string
+		Zoom     int
 	}{}
 
 	for {
@@ -66,14 +60,12 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 		start := time.Now()
 
-		zoom := msg.Zoom
-		clusters := service.RangeQueryTiles(
-			msg.TileBounds[0],
-			msg.TileBounds[1],
-			msg.TileBounds[2],
-			msg.TileBounds[3],
-			zoom,
+		bounds := shape.NewBoundaryBox(
+			shape.NewPoint(msg.Lat1, msg.Lng1),
+			shape.NewPoint(msg.Lat2, msg.Lng2),
 		)
+
+		clusters := service.RangeQueryQuadKeys(bounds, msg.QuadKeys)
 
 		res := make([]response, len(clusters))
 		for i, p := range clusters {
@@ -123,9 +115,7 @@ func readConfig() error {
 
 func initService() {
 	service = NewTileService(
-		//NewInMemoryRepo(Pdf, Kdb, Pdb, Kdf, "config/markets_points.json"),
 		NewTileRepo("config/markets_points.json"),
-		//NewRunTimeClustering(Pdf, Kdb, Pdb, Kdf),
 	)
 }
 

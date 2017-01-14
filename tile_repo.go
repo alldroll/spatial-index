@@ -27,6 +27,7 @@ func NewTileRepo(source string) *TileRepo {
 	return repo
 }
 
+/*
 func (self *TileRepo) RangeQuery(x1, y1, x2, y2 float64, zoom uint) (string, []*trie.NodeData) {
 	tileMinX, tileMinY := tile_system.LatLngToTileXY(x1, y1, zoom)
 	tileMaxX, tileMaxY := tile_system.LatLngToTileXY(x2, y2, zoom)
@@ -42,6 +43,11 @@ func (self *TileRepo) RangeQueryTiles(tileMinX, tileMinY, tileMaxX, tileMaxY int
 		}
 	}
 
+	return self.RangeQueryQuadKeys(quadKeys)
+}
+*/
+
+func (self *TileRepo) RangeQueryQuadKeys(quadKeys []string) (string, []*trie.NodeData) {
 	commonPrefix := LCP(quadKeys)
 
 	var data []*trie.NodeData
