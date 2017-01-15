@@ -37,9 +37,8 @@ func (self *Point) GetY() float64 {
 	return self.y
 }
 
-func (self *Point) Plus(other *Point) {
-	self.x += other.x
-	self.y += other.y
+func (self *Point) Copy() *Point {
+	return NewPoint(self.x, self.y)
 }
 
 func NewBoundaryBox(bl, tr *Point) *BoundaryBox {
@@ -52,6 +51,10 @@ func (self *BoundaryBox) GetBottomLeft() *Point {
 
 func (self *BoundaryBox) GetTopRight() *Point {
 	return self.tr
+}
+
+func (self *BoundaryBox) Copy() *BoundaryBox {
+	return NewBoundaryBox(self.bl, self.tr)
 }
 
 func (self *BoundaryBox) Equal(other *BoundaryBox) bool {
@@ -120,6 +123,10 @@ func (self *BoundaryBox) extend(bl *Point, tr *Point) *BoundaryBox {
 
 func NewCluster(point *Point, count int) *Cluster {
 	return &Cluster{NewBoundaryBox(point, point), count}
+}
+
+func (self *Cluster) Copy() *Cluster {
+	return &Cluster{self.BoundaryBox, self.count}
 }
 
 func (self *Cluster) GetX() float64 {

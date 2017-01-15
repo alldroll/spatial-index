@@ -50,6 +50,14 @@ func LatLngToTileXY(lat, lng float64, zoom uint) (int, int) {
 	return int(x), int(y)
 }
 
+func TileXYToLatLng(x, y int, zoom uint) (float64, float64) {
+	scale := GetScale(zoom)
+	lng := float64(x)/float64(scale)*360 - 180
+	latRad := math.Atan(math.Sinh(math.Pi * (1 - 2*float64(y)/float64(scale))))
+	lat := latRad * 180.0 / math.Pi
+	return lat, lng
+}
+
 func TileXYToQuadKey(x, y int, zoom uint) string {
 	var buffer bytes.Buffer
 	for i := zoom; i > 0; i-- {

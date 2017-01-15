@@ -1,10 +1,8 @@
 package main
 
 import (
-	"github.com/alldroll/spatial-index/geometry"
-	//"log"
 	"github.com/alldroll/spatial-index/clustering"
-	//"strconv"
+	"github.com/alldroll/spatial-index/geometry"
 )
 
 type TileService struct {
@@ -16,13 +14,25 @@ func NewTileService(tr *TileRepo) *TileService {
 }
 
 func (self *TileService) RangeQueryQuadKeys(bounds *shape.BoundaryBox, quadKeys []string) []*shape.Cluster {
-	_, nodesData := self.tr.RangeQueryQuadKeys(quadKeys)
-	clusterBuilder := cluster.NewClusterBuilder(bounds, 0.1)
-	for _, nodeData := range nodesData {
-		for _, point := range nodeData.GetData() {
-			clusterBuilder.AddPoint(point.(*shape.Point))
+	var (
+		allowed  []string
+		clusters []*shape.Cluster
+	)
+
+	for _, quadKey := range quadKeys {
+		cluster := self.tr.GetCluster(quadKey)
+		if cluster != nil && cluster.GetCount() < 500 {
+			allowed = append(allowed, quadKey)
+		} else if cluster != nil {
+			clusters = append(clusters, cluster)
 		}
 	}
 
-	return clusterBuilder.GetClusters()
+	_, points := self.tr.RangeQueryQuadKeys(allowed)
+	clusterBuilder := cluster.NewClusterBuilder(bounds, 0.1)
+	for _, point := range points {
+		clusterBuilder.AddPoint(point)
+	}
+
+	return append(clusterBuilder.GetClusters(), clusters...)
 }
