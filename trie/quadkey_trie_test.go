@@ -8,27 +8,29 @@ import (
 func TestRangeQuery(t *testing.T) {
 	trie := NewQuadKeyTrie()
 
-	quadKeys := [...]string{
-		"1202300",
-		"1202201",
-		"1202202",
-		"1202312",
-		"0312313",
-		"0312330",
-		"1212202",
-		"1202301",
-		"120",
-		"12",
+	quadKeys := [...][]byte{
+		[]byte("1202300"),
+		[]byte("1202201"),
+		[]byte("1202202"),
+		[]byte("1202312"),
+		[]byte("0312313"),
+		[]byte("0312330"),
+		[]byte("1212202"),
+		[]byte("1202301"),
+		[]byte("120"),
+		[]byte("12"),
 	}
 
 	for i, quadKey := range quadKeys {
-		err := trie.AddPoint(quadKey, shape.NewPoint(float64(i), float64(i)))
+		newTrie, err := trie.AddPoint(quadKey, shape.NewPoint(float64(i), float64(i)))
 		if err != nil {
 			t.Errorf(err.Error())
 		}
+
+		trie = newTrie
 	}
 
-	points, err := trie.RangeQuery("120")
+	points, err := trie.RangeQuery([]byte("120"))
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -39,10 +41,51 @@ func TestRangeQuery(t *testing.T) {
 		)
 	}
 
-	cluster := trie.GetCluster("120")
+	cluster := trie.GetCluster([]byte("120"))
 	if 5 != cluster.GetCount() {
 		t.Errorf(
 			"Test Fail, expected {%d} len, got {%d}", 5, cluster.GetCount(),
 		)
 	}
+}
+
+func TestMissingRangeQuery(t *testing.T) {
+	trie := NewQuadKeyTrie()
+
+	quadKeys := [...][]byte{
+		[]byte("1202300"),
+		[]byte("1202201"),
+		[]byte("1202202"),
+		[]byte("1202312"),
+		[]byte("0312313"),
+		[]byte("0312330"),
+		[]byte("1212202"),
+		[]byte("1202301"),
+		[]byte("120"),
+		[]byte("12"),
+	}
+
+	for i, quadKey := range quadKeys {
+		newTrie, err := trie.AddPoint(quadKey, shape.NewPoint(float64(i), float64(i)))
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+
+		trie = newTrie
+	}
+
+	points, err := trie.RangeQuery([]byte("000"))
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if len(points) != 0 {
+		t.Errorf(
+			"Test Fail, expected {%d} len", 0,
+		)
+	}
+}
+
+func BenchmarkCreateTrie(b *testing.B) {
+	/* TODO */
 }

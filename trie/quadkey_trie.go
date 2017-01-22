@@ -3,44 +3,70 @@ package trie
 import (
 	"errors"
 	"github.com/alldroll/spatial-index/geometry"
-	"strconv"
 )
 
 type QuadKeyTrie struct {
-	root   *tile
-	length int
+	root *tile
 }
 
 type tile struct {
-	quadKey string
+	quadKey []byte
 	data    []*shape.Point
 	edges   [4]*tile
 	cluster *shape.Cluster
 }
 
 func NewQuadKeyTrie() *QuadKeyTrie {
-	return &QuadKeyTrie{
-		newTile(),
-		0,
-	}
+	return &QuadKeyTrie{newEmptyTile()}
 }
 
-func (self *QuadKeyTrie) AddPoint(quadKey string, point *shape.Point) error {
+func (self *QuadKeyTrie) AddPoint(quadKey []byte, point *shape.Point) (*QuadKeyTrie, error) {
 	if len(quadKey) == 0 {
-		return errors.New("empty quadKey")
+		return nil, errors.New("empty quadKey")
 	}
 
-	self.root.addPoint(quadKey, 0, point)
-	return nil
+	newTrie := NewQuadKeyTrie()
+	current := self.root.Copy()
+
+	for iter := 0; iter < len(quadKey); iter++ {
+		if iter == 0 {
+			newTrie.root = current
+		}
+
+		if current.cluster == nil {
+			current.cluster = shape.NewCluster(point, 1)
+		} else {
+			current.cluster.AddPoint(point)
+		}
+
+		k := quadKey[iter] - 48
+		if current.edges[k] == nil {
+			current.edges[k] = newEmptyTile()
+		} else {
+			current.edges[k] = current.edges[k].Copy()
+		}
+
+		current = current.edges[k]
+
+		if iter == len(quadKey)-1 {
+			if current.quadKey == nil {
+				current.quadKey = quadKey
+			}
+
+			current.data = append(current.data, point)
+		}
+	}
+
+	return newTrie, nil
 }
 
-func (self *QuadKeyTrie) RangeQuery(prefix string) ([]*shape.Point, error) {
+func (self *QuadKeyTrie) RangeQuery(prefix []byte) ([]*shape.Point, error) {
 	var data []*shape.Point
 	if len(prefix) == 0 {
 		return data, errors.New("empty prefix")
 	}
 
-	self.root.lookup(prefix, 0, &data)
+	self.root.lookup(prefix, &data)
 	if len(data) == 0 {
 		return data, nil
 	}
@@ -53,78 +79,62 @@ func (self *QuadKeyTrie) RangeQuery(prefix string) ([]*shape.Point, error) {
 	return copy, nil
 }
 
-func (self *QuadKeyTrie) GetCluster(quadKey string) *shape.Cluster {
-	cluster := self.root.getCluster(quadKey, 0)
-	if cluster != nil {
-		cluster = cluster.Copy()
+func (self *QuadKeyTrie) GetCluster(quadKey []byte) *shape.Cluster {
+	current := self.root
+	for i := 0; i < len(quadKey) && current != nil; i++ {
+		k := quadKey[i] - 48
+		current = current.edges[k]
 	}
 
-	return cluster
+	if current == nil {
+		return nil
+	}
+
+	return current.cluster
 }
 
-func newTile() *tile {
+func newEmptyTile() *tile {
 	return &tile{
-		"", make([]*shape.Point, 0), [4]*tile{nil, nil, nil, nil}, nil,
+		nil, make([]*shape.Point, 0), [4]*tile{nil, nil, nil, nil}, nil,
 	}
 }
 
-func (self *tile) addPoint(quadKey string, iter int, point *shape.Point) {
-	if len(quadKey) <= iter {
-		self.quadKey = quadKey
-		self.data = append(self.data, point)
-		return
+func (self *tile) Copy() *tile {
+	newTile := newEmptyTile()
+
+	if self.cluster != nil {
+		newTile.cluster = self.cluster.Copy()
 	}
 
-	if self.cluster == nil {
-		self.cluster = shape.NewCluster(point, 1)
-	} else {
-		self.cluster.AddPoint(point)
+	for i, edge := range self.edges {
+		newTile.edges[i] = edge
 	}
 
-	c := string(quadKey[iter])
-	k, _ := strconv.Atoi(c)
-	if self.edges[k] == nil {
-		self.edges[k] = newTile()
+	newTile.data = make([]*shape.Point, len(self.data))
+	copy(newTile.data, self.data)
+	if self.quadKey != nil {
+		newTile.quadKey = make([]byte, len(self.quadKey))
+		copy(newTile.quadKey, self.quadKey)
 	}
 
-	iter++
-	self.edges[k].addPoint(quadKey, iter, point)
+	return newTile
 }
 
-func (self *tile) lookup(prefix string, iter int, data *[]*shape.Point) {
-	if len(self.quadKey) > 0 && len(prefix) == iter {
+func (self *tile) lookup(prefix []byte, data *[]*shape.Point) {
+	if self.quadKey != nil && len(prefix) == 0 {
 		*data = append(*data, self.data...)
 	}
 
-	if len(prefix) > iter {
-		c := string(prefix[iter])
-		k, _ := strconv.Atoi(c)
-		iter++
+	if len(prefix) > 0 {
+		k := prefix[0] - 48
 		if self.edges[k] != nil {
-			self.edges[k].lookup(prefix, iter, data)
+			self.edges[k].lookup(prefix[1:], data)
 		}
 	} else {
 		for _, edge := range self.edges {
 			if edge != nil {
-				edge.lookup(prefix, iter, data)
+				edge.lookup(prefix, data)
 			}
 		}
 	}
-}
-
-func (self *tile) getCluster(quadKey string, iter int) *shape.Cluster {
-	if len(quadKey) == iter {
-		return self.cluster
-	}
-
-	if len(quadKey) > iter {
-		c := string(quadKey[iter])
-		k, _ := strconv.Atoi(c)
-		iter++
-		if self.edges[k] != nil {
-			return self.edges[k].getCluster(quadKey, iter)
-		}
-	}
-
-	return nil
 }

@@ -31,7 +31,7 @@ func (self *TileRepo) RangeQueryQuadKeys(quadKeys []string) (string, []*shape.Po
 
 	var data []*shape.Point
 	for _, quadKey := range quadKeys {
-		d, _ := self.tr.Load().(*trie.QuadKeyTrie).RangeQuery(quadKey)
+		d, _ := self.tr.Load().(*trie.QuadKeyTrie).RangeQuery([]byte(quadKey))
 		data = append(data, d...)
 	}
 
@@ -39,13 +39,22 @@ func (self *TileRepo) RangeQueryQuadKeys(quadKeys []string) (string, []*shape.Po
 }
 
 func (self *TileRepo) GetCluster(quadKey string) *shape.Cluster {
-	return self.tr.Load().(*trie.QuadKeyTrie).GetCluster(quadKey)
+	return self.tr.Load().(*trie.QuadKeyTrie).GetCluster([]byte(quadKey))
 }
 
 func (self *TileRepo) InsertPoint(lat, lng float64) {
 	tileX, tileY := tile_system.LatLngToTileXY(lat, lng, 23)
 	quadKey := tile_system.TileXYToQuadKey(tileX, tileY, 23)
-	self.tr.Load().(*trie.QuadKeyTrie).AddPoint(quadKey, shape.NewPoint(lat, lng))
+	trie, err := self.tr.Load().(*trie.QuadKeyTrie).AddPoint(
+		[]byte(quadKey),
+		shape.NewPoint(lat, lng),
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	self.tr.Store(trie)
 }
 
 func (self *TileRepo) RemovePoint(x, y float64) {
