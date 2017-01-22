@@ -108,19 +108,21 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func readConfig() error {
-	file, _ := os.Open("config/conf.json")
+	file, _ := os.Open("config/config.json")
 	decoder := json.NewDecoder(file)
 	return decoder.Decode(&appConf)
 }
 
 func initService() {
 	service = NewTileService(
-		NewTileRepo("config/markets_points.json"),
+		NewTileRepo("config/vl_points.json"),
 	)
 }
 
 func main() {
+
 	err := readConfig()
+
 	if err != nil {
 		log.Fatal(err)
 		return
