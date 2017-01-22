@@ -3,6 +3,7 @@ package trie
 import (
 	"github.com/alldroll/spatial-index/geometry"
 	"testing"
+	"math/rand"
 )
 
 func TestRangeQuery(t *testing.T) {
@@ -87,5 +88,28 @@ func TestMissingRangeQuery(t *testing.T) {
 }
 
 func BenchmarkCreateTrie(b *testing.B) {
-	/* TODO */
+	var quadKeys [][]byte
+	for i := 0; i < 10000; i++ {
+		quadKeys = append(quadKeys, randBytes(23))
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		trie := NewQuadKeyTrie()
+		for i, quadKey := range quadKeys {
+			trie, _ = trie.AddPoint(quadKey, shape.NewPoint(float64(i), float64(i)))
+		}
+	}
+}
+
+const letterBytes = "0123"
+
+func randBytes(n int) []byte {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+
+	return b
 }
