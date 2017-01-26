@@ -88,11 +88,9 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		WSPath string
 		ApiKey string
 		Zoom   string
 	}{
-		WSPath: "ws://" + appConf.Host + "/ws",
 		ApiKey: appConf.GoogleApiKey,
 		Zoom:   appConf.Zoom,
 	}
@@ -108,10 +106,6 @@ func main() {
 
 	appConf.GoogleApiKey = os.Getenv("GOOGLE_API_KEY")
 	appConf.Zoom = os.Getenv("ZOOM")
-	appConf.Host = os.Getenv("HOST")
-	if appConf.Host == "" {
-		appConf.Host = "localhost:" + port
-	}
 
 	service = NewService()
 
