@@ -18,7 +18,7 @@
 
     <script type="text/javascript">
         window.App.init({
-            wsPath: location.protocol.replace("http","ws") + "//" + location.host + "/ws",
+            wsPath: "ws://" + location.host + "/ws",
             zoom: parseInt("{{.Zoom}}") || 12,
             element: "map"
         });
