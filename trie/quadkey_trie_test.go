@@ -2,8 +2,8 @@ package trie
 
 import (
 	"github.com/alldroll/spatial-index/geometry"
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 func TestRangeQuery(t *testing.T) {

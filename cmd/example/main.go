@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/alldroll/spatial-index/geometry"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -9,20 +8,20 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 type AppConf struct {
 	Host         string
 	GoogleApiKey string
-	Zoom         int
+	Zoom         string
 }
 
 var (
-	indexTemplate = template.Must(template.ParseFiles("public/index.html"))
+	indexTemplate = template.Must(template.ParseFiles("cmd/example/public/index.html"))
 	upgrader      = websocket.Upgrader{}
 	appConf       = AppConf{}
-	service       *TileService
+	port          = ""
+	service       *Service
 )
 
 func serveWS(w http.ResponseWriter, r *http.Request) {
@@ -58,14 +57,12 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		start := time.Now()
-
 		bounds := shape.NewBoundaryBox(
 			shape.NewPoint(msg.Lat1, msg.Lng1),
 			shape.NewPoint(msg.Lat2, msg.Lng2),
 		)
 
-		clusters := service.RangeQueryQuadKeys(bounds, msg.QuadKeys)
+		clusters := service.RangeQuery(bounds, msg.QuadKeys)
 
 		res := make([]response, len(clusters))
 		for i, p := range clusters {
@@ -75,10 +72,6 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 				Cnt: p.GetCount(),
 			}
 		}
-
-		elapsed := time.Since(start)
-
-		log.Printf("Took %s\n", elapsed)
 
 		err = conn.WriteJSON(res)
 		if err != nil {
@@ -97,7 +90,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		WSPath string
 		ApiKey string
-		Zoom   int
+		Zoom   string
 	}{
 		WSPath: "ws://" + appConf.Host + "/ws",
 		ApiKey: appConf.GoogleApiKey,
@@ -107,35 +100,25 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	indexTemplate.Execute(w, data)
 }
 
-func readConfig() error {
-	file, _ := os.Open("config/config.json")
-	decoder := json.NewDecoder(file)
-	return decoder.Decode(&appConf)
-}
-
-func initService() {
-	service = NewTileService(
-		NewTileRepo("config/vl_points.json"),
-	)
-}
-
 func main() {
-
-	err := readConfig()
-
-	if err != nil {
-		log.Fatal(err)
-		return
+	port = os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("$PORT must be set")
 	}
 
-	initService()
+	appConf.GoogleApiKey = os.Getenv("GOOGLE_API_KEY")
+	appConf.Zoom = os.Getenv("ZOOM")
+	appConf.Host = os.Getenv("HOST")
+	if appConf.Host == "" {
+		appConf.Host = "localhost:" + port
+	}
+
+	service = NewService()
 
 	r := mux.NewRouter()
-
 	r.HandleFunc("/", serveHome)
-	r.HandleFunc("/ws", serveWS)
+	r.HandleFunc("/ws", serveWS).Name("wsRoute")
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./cmd/example/public/")))
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
-
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":"+port, r))
 }

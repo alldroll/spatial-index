@@ -30,7 +30,7 @@ func TestPointCompare(t *testing.T) {
 		{NewPoint(1.0, 1), NewPoint(1.0000, 1.0), true},
 		{NewPoint(1.000, 0.), NewPoint(1.0000, 0.0000000000), true},
 		{NewPoint(1, 2), NewPoint(2, 1), false},
-		{NewPoint(0, 0), NewPoint(.0, 0.000000000001), false},
+		{NewPoint(0, 0), NewPoint(.0, 0.000000000001), true},
 	}
 
 	for _, c := range cases {
@@ -87,14 +87,5 @@ func BenchmarkContaints(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		box.ContainsPoint(point)
-	}
-}
-
-func BenchmarkPlus(b *testing.B) {
-	point := NewPoint(0.3, 0.2)
-	other := NewPoint(0, 0)
-
-	for i := 0; i < b.N; i++ {
-		point.Plus(other)
 	}
 }

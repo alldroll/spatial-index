@@ -1,4 +1,3 @@
-conf.json
-markets_points.json
+vendor/*/
 *.test
 *.out
