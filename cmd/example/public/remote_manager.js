@@ -1,29 +1,42 @@
 (function(root, factory) {
     if ("function" === typeof define && define.amd) {
-        define("remote_manager", ["google_maps", "tile_system", "inherence"], factory);
+        define("remote_manager",
+            [
+                "google_maps",
+                "tile_system",
+                "reconnecting-websocket",
+                "inherence"
+            ],
+            factory
+        );
     } else if ("object" === typeof module && module.exports) {
         module.exports = factory(
             require('google_maps'),
             require('tile_system'),
+            require('reconnecting-websocket'),
             require('inherence')
         );
     } else {
         root.RemoteManager = factory(
             root.google,
             root.TileSystem,
+            root.ReconnectingWebSocket,
             root.Inherence
         );
     }
-})(this, function(google, TileSystem, Inherence) {
+})(this, function(google, TileSystem, ReconnectingWebSocket, Inherence) {
     var RemoteManager = function(map, wsPath, onPointReceived) {
         this.map = map;
-        this.ws = new WebSocket(wsPath);
+        this.ws = new ReconnectingWebSocket(wsPath);
         this.onPointReceived = onPointReceived;
     };
 
     RemoteManager.prototype.run = function() {
         this.map.addListener('idle', this._onIdle.bind(this));
         this.ws.onmessage = this._onMessage.bind(this);
+        this.ws.onclose = (function() {
+            this.ws = new WebSocket(this.ws.url);
+        }).bind(this);
     };
 
     RemoteManager.prototype._onIdle = function() {
@@ -43,7 +56,7 @@
     };
 
     RemoteManager.prototype._send = function(toSend) {
-        this.ws.send(JSON.stringify(toSend))
+        this.ws.send(JSON.stringify(toSend));
     };
 
     RemoteManager.prototype._onMessage = function(event) {
@@ -100,7 +113,7 @@
     CachedRemoteManager.prototype._fetchPoints = function() {
         var bounds = this.bounds, zoom = this.zoom;
 
-        var lat1 = bounds.getSouthWest().lat()
+        var lat1 = bounds.getSouthWest().lat(),
             lng1 = bounds.getSouthWest().lng(),
             lat2 = bounds.getNorthEast().lat(),
             lng2 = bounds.getNorthEast().lng();
