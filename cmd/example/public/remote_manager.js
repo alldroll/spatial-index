@@ -32,9 +32,14 @@
     };
 
     RemoteManager.prototype.run = function() {
-        this.map.addListener('idle', this._onIdle.bind(this));
         this.ws.onmessage = this._onMessage.bind(this);
+
+        this.ws.onopen = (function() {
+            this.map.addListener('idle', this._onIdle.bind(this));
+        }).bind(this);
+
         this.ws.onclose = (function() {
+            this.map.removeListener('idle');
             this.ws = new WebSocket(this.ws.url);
         }).bind(this);
     };
