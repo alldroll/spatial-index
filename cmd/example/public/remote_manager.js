@@ -32,16 +32,35 @@
     };
 
     RemoteManager.prototype.run = function() {
+        var that = this;
         this.ws.onmessage = this._onMessage.bind(this);
 
-        this.ws.onopen = (function() {
-            this.map.addListener('idle', this._onIdle.bind(this));
-        }).bind(this);
+        var p1 = new Promise(function(resolve, reject) {
+            that.ws.onopen = (function() {
+                resolve();
+            });
 
-        this.ws.onclose = (function() {
-            this.map.removeListener('idle');
-            this.ws = new WebSocket(this.ws.url);
-        }).bind(this);
+            that.ws.onerror = (function(event) {
+                reject();
+            });
+        });
+
+        var p2 = new Promise(function(resolve, reject) {
+           google.maps.event.addListenerOnce(that.map, 'idle', function() {
+               resolve();
+           });
+        });
+
+        Promise.all([p1, p2]).then(
+            function() {
+                google.maps.event.addListener(that.map, 'idle', that._onIdle.bind(that));
+                that._onIdle();
+            }, 
+
+            function(values) {
+                console.error(values);
+            }
+        )
     };
 
     RemoteManager.prototype._onIdle = function() {
