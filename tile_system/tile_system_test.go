@@ -26,6 +26,37 @@ func TestMercatorProjection(t *testing.T) {
 	}
 }
 
+func TestLatLngToTileXY(t *testing.T) {
+	cases := []struct {
+		lat, lng float64
+		zoom     uint
+		x, y     int
+	}{
+		{
+			-30.772727396604843, 22.463982922607443,
+			3,
+			4, 4,
+		},
+
+		{
+			78.5555364791068, -166.85242332739256,
+			3,
+			0, 1,
+		},
+	}
+
+	for _, c := range cases {
+		x, y := LatLngToTileXY(c.lat, c.lng, c.zoom)
+		if c.x != x || c.y != y {
+			t.Errorf(
+				"TestFail, expected {%d, %d}, got {%d, %d}",
+				c.x, c.y,
+				x, y,
+			)
+		}
+	}
+}
+
 func TestTileXYToQuadKey(t *testing.T) {
 	cases := []struct {
 		x, y    int

@@ -47,7 +47,7 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		Lat2     float64
 		Lng2     float64
 		QuadKeys []string
-		Zoom     int
+		Zoom     uint
 	}{}
 
 	for {
@@ -63,7 +63,6 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		)
 
 		clusters := service.RangeQuery(bounds, msg.QuadKeys)
-
 		res := make([]response, len(clusters))
 		for i, p := range clusters {
 			res[i] = response{
